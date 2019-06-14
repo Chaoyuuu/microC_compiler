@@ -1,10 +1,9 @@
-/////////////Downloads new githubS
-
 /*	Definition section */
 %{
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "global.h"
 #include "y.tab.h"
 
 int table_depth = 0;
@@ -17,9 +16,10 @@ struct Entry{
     struct Entry * entry_pre;
 
     int index;
-    char name[20];
+    char name[20];     
     char kind[20];
     char type[20];
+    // int type;
     int scope;
     char attribute[50];
 };
@@ -44,9 +44,11 @@ extern int error_flag; //1.redefined 2.undefined
 extern int syntax_flag;
 extern char error_msg[256];
 extern int dump_flag;
-//extern void yyerror(char *s);
+extern void yyerror(char *s);
 
 int func_flag = 0;
+FILE *file; // To generate .j file for Jasmin
+
 
 /* Symbol table function - you can add new function if needed. */
 void get_attribute(struct Entry * tmp);
@@ -57,13 +59,27 @@ void insert_symbol();
 void dump_symbol();
 void dump_table();
 
+/* expression function */
+// Value do_assign();
+Value switch_mul_op();
+Value switch_addition_op();
+Value switch_postfix_op();
+Value switch_assign_op();
+Value switch_relation_op();
+Value switch_logic_op();
 
-FILE *file; // To generate .j file for Jasmin
 
-void yyerror(char *s);
+//arithmetic
+Value mul_arith(Value v1, Value v2);
+Value div_arith(Value v1, Value v2);
+Value mod_arith(Value v1, Value v2);
+Value add_arith(Value v1, Value v2);
+Value minus_arith(Value v1, Value v2);
 
-/* code generation functions, just an example! */
-void gencode_function();
+//code generation function
+void gencode_global_1();
+void gencode_global_2();
+
 
 
 %}
@@ -72,38 +88,32 @@ void gencode_function();
  * nonterminal and token type
  */
 %union {
-    int i_val;    //not use
-    double f_val; //not use
-    char* string; //not use
-    char* symbol_name;  //return ID
-    char* symbol_type;  //return type
+    
+    Value val;
+    Operator op;
+
 }
 
 /* Token */
-%token BOOL
-%token FLOAT
-%token INT
-%token VOID
-%token STRING
+%token BOOL FLOAT INT VOID STRING
 %token INC_OP DEC_OP GE_OP LE_OP EQ_OP NE_OP AND_OP OR_OP
 %token ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN
 %token TRUE FALSE RETURN 
-
-/* Token without return */
 %token PRINT 
 %token IF ELSE FOR WHILE 
-%token SEMICOLON QUOTA ID
+%token SEMICOLON QUOTA 
 
 /* Token with return, which need to sepcify type */
-%token <i_val> I_CONST
-%token <f_val> F_CONST
-%token <string> STRING_CONST 
+%token <val> I_CONST
+%token <val> F_CONST
+%token <val> STRING_CONST 
+%token <val> ID
 
-/* Nonterminal with return, which need to sepcify type */
-%type <f_val> stat 
-// %type <string> declaration
-%type <symbol_type> type
-%type <symbol_name> ID
+
+%type <val> type initializer 
+%type <val> expression logic_expr comparison_expr add_expr mul_expr 
+%type <val> postfix_expr parenthesis_expr assign_expression 
+%type <op>  postfix_op mul_op relation_op addition_op logic_op assign_op 
 
 /* Yacc will start at this nonterminal */
 %start program 
@@ -118,18 +128,24 @@ program
 ;
 
 stat
-    : declaration {}
-    | compound_stat {}
-    | expression_stat {}
-    | print_func {} 
-    | function_declaration {}
+    : declaration 
+    | compound_stat
+    | expression_stat
+    | print_func 
+    | function_declaration
 ;
 
 declaration
-    : type ID '=' expression SEMICOLON 
-        { lookup_symbol($2, 1); if(error_flag != 1) insert_symbol($1, $2, type_v); }
+    : type ID '=' expression SEMICOLON  { printf("nooooooooo\n"); lookup_symbol($2.id_name, 1); 
+                                          if(error_flag != 1){
+                                            printf("nooooooooo\n"); 
+                                            insert_symbol($1, $2, type_v); 
+                                            printf("nooooooooo\n"); 
+                                            gencode_global_1($1, $2, $4);
+                                          }
+                                        }
     | type ID SEMICOLON 
-        { lookup_symbol($2, 1); if(error_flag != 1) insert_symbol($1, $2, type_v); }
+        { lookup_symbol($2.id_name, 1); if(error_flag != 1) insert_symbol($1, $2, type_v); gencode_global_2($1, $2); }
 ;
 
 print_func
@@ -153,99 +169,99 @@ expression_stat
 selection_statement
     : IF { create_symbol(); }
       '(' expression ')' compound_stat
-    | selection_statement 
+    | /* selection_statement */
       ELSE { create_symbol(); } compound_stat
-    | selection_statement
+    | /* selection_statement */
       ELSE IF{ create_symbol(); }
       '(' expression ')' compound_stat
 ;
 
 while_statement
-    : WHILE 
-     { create_symbol(); }
-    '(' expression ')' compound_stat 
+    : WHILE                                 
+      { create_symbol(); }
+     '(' expression ')' compound_stat 
 ;
 
 
 expression
-    : logic_expr
-    | assign_expression
+    : logic_expr {}
+    | assign_expression {}
 ;
 
 logic_expr
-    : comparison_expr
-    | logic_expr logic_op comparison_expr
+    : comparison_expr                       {}
+    | logic_expr logic_op comparison_expr   { $$ = switch_logic_op($1, $2, $3); }
 ;
 
 comparison_expr
-    : add_expr
-    | comparison_expr relation_op add_expr
+    : add_expr {}
+    | comparison_expr relation_op add_expr { $$ = switch_relation_op($1, $2, $3); }
 ;
 
 add_expr
-    : mul_expr
-    | add_expr addition_op mul_expr
+    : mul_expr {}
+    | add_expr addition_op mul_expr { $$ = switch_addition_op($1, $2, $3); }
 ;
 
 mul_expr
-    : postfix_expr
-    | mul_expr mul_op postfix_expr
+    : postfix_expr {}
+    | mul_expr mul_op postfix_expr { $$ = switch_mul_op($1, $2, $3); }
 ;
 
 postfix_expr
-    : parenthesis_expr
-    | parenthesis_expr postfix_op
+    : parenthesis_expr {}
+    | parenthesis_expr postfix_op { $$ = switch_postfix_op($1, $2); }
 ;
 
 parenthesis_expr
-    : initializer
-    | ID { lookup_function($1, 1); }
-      declarator2
-    | '(' expression ')'
+    : initializer {}
+    | ID { lookup_function($1.id_name, 1); }
+      declarator2 {}
+    | '(' expression ')' { $$ = $2; }
 ;
 
 postfix_op
-    : INC_OP 
-    | DEC_OP 
+    : INC_OP    { $$ = INC_OPT; }
+    | DEC_OP    { $$ = DEC_OPT; }
 ;
 
 mul_op
-    : '*' 
-    | '/' 
-    | '%'
+    : '*'   { $$ = MUL_OPT; }
+    | '/'   { $$ = DIV_OPT; }
+    | '%'   { $$ = MOD_OPT; }
 ;
 
 relation_op
-    : '>' 
-    | '<' 
-    | GE_OP 
-    | LE_OP 
-    | EQ_OP 
-    | NE_OP 
+    : '>'   { $$ = MORE_OPT; }
+    | '<'   { $$ = LESS_OPT; }
+    | GE_OP { $$ = GE_OPT; }
+    | LE_OP { $$ = LE_OPT; }
+    | EQ_OP { $$ = EQ_OPT; }
+    | NE_OP { $$ = NE_OPT; }
 ;
 
 addition_op
-    : '+' 
-    | '-' 
+    : '+'   { $$ = ADD_OPT; }
+    | '-'   { $$ = MINUS_OPT; }
 ;
 
 logic_op
-    : AND_OP 
-    | OR_OP 
-    | '!' 
+    : AND_OP { $$ = AND_OPT; }
+    | OR_OP  { $$ = OR_OPT; }
+    | '!'    { $$ = NOT_OPT; }
 ;
 
 assign_expression
-    : expression assign_op expression 
+    : expression assign_op expression { switch_assign_op($1, $2, $3); }
 ;
 
 assign_op
-    : ADD_ASSIGN 
-    | SUB_ASSIGN 
-    | MUL_ASSIGN 
-    | DIV_ASSIGN 
-    | MOD_ASSIGN 
-    | '=' 
+    : ADD_ASSIGN { $$ = ADD_ASSIGN_OPT; }
+    | SUB_ASSIGN { $$ = SUB_ASSIGN_OPT; }
+    | MUL_ASSIGN { $$ = MUL_ASSIGN_OPT; }
+    | DIV_ASSIGN { $$ = DIV_ASSIGN_OPT; }
+    | MOD_ASSIGN { $$ = MOD_ASSIGN_OPT; }
+    | '='        { $$ = ASSIGN_OPT; }
 ;
 return_statement
     : RETURN expression SEMICOLON
@@ -254,16 +270,16 @@ return_statement
 
 function_declaration
     : type ID declarator compound_stat 
-      { lookup_function($2, 3); 
+      { lookup_function($2.id_name, 3); 
         if(func_flag != 1) 
-            insert_symbol($1, $2, type_f);
+            insert_symbol($1.symbol_type, $2.id_name, type_f);
         func_flag = 0;
       }
     | type ID declarator SEMICOLON
       { dump_table(); 
-        lookup_function($2, 2); 
+        lookup_function($2.id_name, 2); 
         if(error_flag != 1) 
-            insert_symbol($1, $2, type_f);
+            insert_symbol($1.symbol_type, $2.id_name, type_f);
       }
 ;
 
@@ -276,9 +292,9 @@ declarator
 
 identifier_list
     : identifier_list ',' type ID 
-        { insert_symbol($3, $4, type_p); }
+        { insert_symbol($3.symbol_type, $4.id_name, type_p); }
     | type ID
-        { insert_symbol($1, $2, type_p); }
+        { insert_symbol($1.symbol_type, $2.id_name, type_p); }
 ;
 
 declarator2
@@ -292,27 +308,27 @@ identifier_list2
 ;
 
 initializer
-    : neg_const I_CONST 
-    | neg_const F_CONST
-    | QUOTA STRING_CONST QUOTA
-    | TRUE
-    | FALSE
-    | ID { lookup_symbol($1, 2);}
+    : I_CONST /*neg_const I_CONST */ { $$ = yylval.val; } 
+    | F_CONST /*neg_const F_CONST */ { $$ = yylval.val; }
+    | QUOTA STRING_CONST QUOTA { $$ = yylval.val; }
+    | TRUE  { }
+    | FALSE { }
+    | ID { lookup_symbol($1.id_name, 2); $$ = yylval.val; }
 ;
 
-neg_const
+/* neg_const
     : '-'
     |
-;
+; */
 
 /* actions can be taken when meet the token or rule */
 /* $$ = yylval.val; */
 type
-    : INT {}
-    | FLOAT {}
-    | BOOL  {}
-    | STRING {}
-    | VOID {}
+    : INT   { $$ = yylval.val; }
+    | FLOAT { $$ = yylval.val; }
+    | BOOL  { $$ = yylval.val; }
+    | STRING{ $$ = yylval.val; }
+    | VOID  { $$ = yylval.val; }
 ;
 
 %%
@@ -322,25 +338,15 @@ int main(int argc, char** argv)
 {
     yylineno = 0;
 
-    // file
     file = fopen("compiler_hw3.j","w");
-
     fprintf(file,   ".class public compiler_hw3\n"
-                    ".super java/lang/Object\n"
-                    ".method public static main([Ljava/lang/String;)V\n");
-
+                    ".super java/lang/Object\n");
+             
 
     create_symbol();
     yyparse();
 
-    //file
-    printf("\nTotal lines: %d \n",yylineno);
-
-    fprintf(file, "\treturn\n"
-                  ".end method\n");
-
-    fclose(file);
-
+    
 
     if(syntax_flag != 0){
         // print syntax error msg
@@ -354,6 +360,8 @@ int main(int argc, char** argv)
     dump_table();
     dump_symbol();
     printf("\nTotal lines: %d \n",yylineno);
+
+    fclose(file);
 
     return 0;
 }
@@ -375,13 +383,6 @@ void yyerror(char *s)
     printf("| %s",s);
     printf("\n|-----------------------------------------------|\n\n");
     
-
-    // printf("\n|-----------------------------------------------|\n");
-    // printf("| Error found in line %d: %s\n", yylineno, buf);
-    // printf("| %s", s);
-    // printf("\n| Unmatched token: %s", yytext);
-    // printf("\n|-----------------------------------------------|\n");
-    // exit(-1);
 }
 
 void create_symbol() {
@@ -399,15 +400,19 @@ void create_symbol() {
         table_header = table_current;
     }
 
-    // printf("\n----in create_symbol, depth = %d, current = %p----\n", ptr->table_depth, table_current);
+    printf("\n----in create_symbol, depth = %d, current = %p----\n", ptr->table_depth, table_current);
 }
 
-void insert_symbol(char *t, char* n, char* k) {
-    
+void insert_symbol(Value v1, Value v2, char* k) {
+   
     struct Table *ptr = table_current; 
     struct Entry *e_ptr = malloc(sizeof(struct Entry));
-    // printf("\n----in insert_symbol, %s, %s, %s, %d----\n", n, t, k, ptr->table_depth);
+
+    Symbol_type t = v1.symbol_type;
+    char *n = v2.id_name; 
     
+    printf("\n----in insert_symbol, %d, %s, %s, %d----\n", t, n, k, ptr->table_depth);
+
     if(ptr->entry_header == NULL){
         ptr->entry_header = e_ptr;
         e_ptr->entry_pre = NULL;
@@ -428,15 +433,41 @@ void insert_symbol(char *t, char* n, char* k) {
     memset(e_ptr->name, 0, sizeof(e_ptr->name));
     memset(e_ptr->attribute, 0, sizeof(e_ptr->attribute));
 
-    strcpy(e_ptr->type, t);
+    // strcpy(e_ptr->type, t);
     strcpy(e_ptr->kind, k);
     strcpy(e_ptr->name, n);  
+    // e_ptr->type = t;
+
+    switch (t){
+        case V_Type:
+            strcpy(e_ptr->type, "void");
+            break;
+        case I_Type:
+            strcpy(e_ptr->type, "int");
+            break;
+        case F_Type:
+            strcpy(e_ptr->type, "float");
+            break;
+        case S_Type:
+            strcpy(e_ptr->type, "String");
+            break;
+        case ID_Type:
+            strcpy(e_ptr->type, "ID");
+            break;
+        case B_Type:
+            strcpy(e_ptr->type, "bool");
+            break;
+        default:
+            printf("wrong input in type");
+            break;
+    }
 
     if(strcmp(k, "function") == 0){
         get_attribute(e_ptr);
     }
  
-    // printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
+    printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
+
 }
 
 void get_attribute(struct Entry * tmp){
@@ -575,4 +606,277 @@ void dump_symbol() {
         printf("\n");
     
     }
+}
+
+//code generation function
+void gencode_global_1(Value _type, Value _id, Value _expr){
+    printf("in gencode_1\n");
+    fprintf(file, ".field public static");
+    printf("?????????????\n");
+    char input_tmp[100];
+    memset(input_tmp, 0, sizeof(input_tmp));
+    printf("?????????????\n");
+
+    switch (_type.symbol_type){
+        case B_Type:
+            sprintf(input_tmp, " %s Z = %d\n", _id.id_name, _expr.i);  ///_expr.i ??????????
+            break;
+        case I_Type:
+            sprintf(input_tmp, " %s I = %d\n", _id.id_name, _expr.i);
+            break;
+        case F_Type:
+            sprintf(input_tmp, " %s F = %f\n", _id.id_name, _expr.f);
+            break;
+    /*    
+        case S_Type:
+            strcpy(type_tmp, "S");  //??????
+            break;
+        case V_Type:
+            strcpy(type_tmp, "V");  //?????
+            break;
+    */    
+        default:
+            printf("wrong input in type");
+            break;
+    }
+
+    fprintf(file, "%s", input_tmp);
+
+}
+
+void gencode_global_2(Value _type, Value _id){
+    printf("in gencode_2\n");
+    fprintf(file, ".field public static");
+    char input_tmp[100];
+    memset(input_tmp, 0, sizeof(input_tmp));
+
+    switch (_type.symbol_type){
+        case B_Type:
+            sprintf(input_tmp, " %s Z\n", _id.id_name);  ///_expr.i ??????????
+            break;
+        case I_Type:
+            sprintf(input_tmp, " %s I\n", _id.id_name);
+            break;
+        case F_Type:
+            sprintf(input_tmp, " %s F\n", _id.id_name);
+            break;
+    /*    
+        case S_Type:
+            strcpy(type_tmp, "S");  //??????
+            break;
+        case V_Type:
+            strcpy(type_tmp, "V");  //?????
+            break;
+    */    
+        default:
+            printf("wrong input in type");
+            break;
+    }
+
+    fprintf(file, "%s", input_tmp);
+
+}
+
+
+
+//expression function
+Value switch_mul_op(Value v1, Operator op, Value v2){
+    printf("in switch_mul_op\n");
+    
+    switch (op){
+        case MUL_OPT:
+            return mul_arith(v1, v2);            
+        case DIV_OPT:
+            return div_arith(v1, v2);
+        case MOD_OPT:
+            // return mod_arirh(v1, v2);
+            printf("in MOD_arith\n");
+            break;
+        default:
+            printf("wrong case in mul_arith\n");
+            break;
+    }
+
+}
+
+Value switch_addition_op(Value v1, Operator op, Value v2){
+    printf("in switch_addition_op\n");
+    switch (op) {
+        case ADD_OPT:
+            return add_arith(v1, v2);
+        case MINUS_OPT:
+            return minus_arith(v1, v2);
+        default:
+            printf("wrong case in addition_op\n");
+            break;
+    }
+}
+
+Value switch_postfix_op(Value v1, Operator op){
+    printf("in switch_postfix_op\n");
+    Value tmp;
+    tmp.symbol_type = I_Type;
+    tmp.i = 1;
+
+    switch (op){
+        case INC_OPT:
+            return add_arith(v1, tmp);
+        case DEC_OPT:
+            return minus_arith(v1, tmp);
+        default:
+            printf("wrong case in postfix_op\n");
+            break;
+    }
+}
+
+Value switch_assign_op(Value v1, Operator op, Value v2){
+    printf("in switch_assign_op\n");
+
+    switch (op){
+        case ADD_ASSIGN_OPT:
+            return add_arith(v1, v2);
+        case SUB_ASSIGN_OPT:
+            return minus_arith(v1, v2);
+        case MUL_ASSIGN_OPT:
+            return mul_arith(v1, v2);
+        case DIV_ASSIGN_OPT:
+            return div_arith(v1, v2);
+        case ASSIGN_OPT:
+            return v2;
+        default:
+            printf("wrong case in assign_op\n");
+            break;
+    }
+}
+
+Value switch_relation_op(Value v1, Operator op, Value v2){
+    printf("in switch_relation_op\n");
+    Value tmp;
+    tmp.symbol_type = I_Type; // ??????B_Type
+
+    switch (op){
+        case MORE_OPT:
+            tmp.i = (v1.f > v2.f);
+            return tmp;
+        case LESS_OPT:
+            tmp.i = (v1.f < v2.f);
+            return tmp;
+        case GE_OPT:
+            tmp.i = (v1.f >= v2.f);
+            return tmp;
+        case LE_OPT:
+            tmp.i = (v1.f <= v2.f);
+            return tmp;
+        case EQ_OPT:
+            tmp.i = (v1.f == v2.f);
+            return tmp;
+        case NE_OPT:
+            tmp.i = (v1.f != v2.f);
+            return tmp;
+        default:
+            printf("wrong case in relation_op\n");
+            break;
+    }
+}
+
+Value switch_logic_op(Value v1, Operator op, Value v2){
+    printf("in switch_logic_op\n");
+    Value tmp;
+    tmp.symbol_type = I_Type; // ??????B_Type
+
+    switch (op){
+        case AND_OPT:
+            tmp.i = (v1.f && v2.f);
+            return tmp;
+        case OR_OPT:
+            tmp.i = (v1.f || v2.f);
+            return tmp;
+        case NOT_OPT: //??????????????????? !a
+            tmp.i = (v1.f >= v2.f);
+            return tmp;
+        default:
+            printf("wrong case in logic_op\n");
+            break;
+    }
+}
+
+//arithmetic function
+Value mul_arith(Value v1, Value v2){
+    printf("in mul_arith\n");
+    Value v_tmp;
+    // memset(v_tmp, 0, sizeof(v_tmp));
+
+    if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
+        v_tmp.symbol_type = I_Type;
+        v_tmp.i = (v1.i)*(v2.i);
+    }else{
+        v_tmp.symbol_type = F_Type;
+        v_tmp.f = (v1.f)*(v2.f);
+    }
+    return v_tmp;
+}
+
+Value div_arith(Value v1, Value v2){
+    printf("in div_arith\n");
+    Value v_tmp;
+
+    if(v2.i == 0){
+        printf("v2 cannot be zero !!!");
+        //yyerror;
+        return v1;
+    }
+
+    if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
+        v_tmp.symbol_type = I_Type;
+        v_tmp.i = (v1.i)/(v2.i);
+    }else{
+        v_tmp.symbol_type = F_Type;
+        v_tmp.f = (v1.f)/(v2.f);
+    }
+    return v_tmp;
+}
+
+Value mod_arith(Value v1, Value v2){
+    printf("in mod_arith\n");
+    Value v_tmp;
+
+    if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
+        v_tmp.symbol_type = I_Type;
+        v_tmp.i = (v1.i)%(v2.i);
+        return v_tmp;
+    }else{
+        printf("v1 v2 need to be I_Type\n");
+        //yyerror();
+       v_tmp = v1;
+    }
+    return v_tmp;
+}
+
+Value add_arith(Value v1, Value v2){
+    printf("in add_arith\n");
+    Value v_tmp;
+
+    if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
+        v_tmp.symbol_type = I_Type;
+        v_tmp.i = (v1.i)+(v2.i);
+    }else{
+        v_tmp.symbol_type = F_Type;
+        v_tmp.f = (v1.f)+(v2.f);
+    }
+    return v_tmp;
+
+}
+
+Value minus_arith(Value v1, Value v2){
+    printf("in minus_arith\n");
+    Value v_tmp;
+
+    if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
+        v_tmp.symbol_type = I_Type;
+        v_tmp.i = (v1.i)-(v2.i);
+    }else{
+        v_tmp.symbol_type = F_Type;
+        v_tmp.f = (v1.f)-(v2.f);
+    }
+    return v_tmp;
 }
