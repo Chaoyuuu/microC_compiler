@@ -320,8 +320,8 @@ initializer
     : I_CONST /*neg_const I_CONST */ { $$ = yylval.val; } 
     | F_CONST /*neg_const F_CONST */ { $$ = yylval.val; }
     | QUOTA STRING_CONST QUOTA { $$ = yylval.val; }
-    | TRUE  { }
-    | FALSE { }
+    | TRUE  { $$ = yylval.val; }
+    | FALSE { $$ = yylval.val; }
     | ID { lookup_symbol($1.id_name, 2); $$ = yylval.val; }
 ;
 
@@ -477,6 +477,20 @@ void insert_symbol(Value v1, Value v2, char* k, Value v3) {
     if(strcmp(k, "function") == 0){
         get_attribute(e_ptr);
     }else if(strcmp(k, "variable") == 0){      //paremeter and variable, generate to jasim 
+        //set e_ptr->entry_val
+        // if(strcmp(e_ptr->type, "int") == 0){
+        //     e_ptr->entry_val.symbol_type = I_Type;
+        //     e_ptr->entry_val.i = 
+        // }else if(strcmp(e_ptr->type, "float") == 0){
+        //     e_ptr->entry_val.symbol_type = F_Type;
+        // }else if(strcmp(e_ptr->type, "string") == 0){
+        //     e_ptr->entry_val.symbol_type = S_Type;
+        // }else if(strcmp(e_ptr->type, "bool") == 0){
+        //     e_ptr->entry_val.symbol_type = B_Type;
+        // }else{
+        //     printf("the wrong e_ptr->type\n");
+        // }
+
         if(table_current->table_depth == 0){
             if(v3.symbol_type != 6)     //int a = 3;
                 gencode_global_1(v1, v2, v3);
@@ -650,7 +664,7 @@ void gencode_global_1(Value _type, Value _id, Value _expr){
             sprintf(input_tmp, " %s F = %f\n", _id.id_name, _expr.f);
             break;    
         case S_Type:
-            sprintf(input_tmp, " %s S = %s\n", _id.id_name, _expr.s);
+            sprintf(input_tmp, " %s S = \"%s\"\n", _id.id_name, _expr.s);
             break;
         default:
             printf("wrong input in type\n");
@@ -703,7 +717,11 @@ void gencode_local_1(Value _type, Value _id, Value _expr, int index){
     */
     switch (_type.symbol_type){
         case B_Type:
-            sprintf(input_tmp, "\tldc %d\n\tistore %d\n", _expr.i, index);
+            if(_expr.s == "true"){
+                sprintf(input_tmp, "\tldc 1\n\tistore %d\n", index);
+            }else{
+                sprintf(input_tmp, "\tldc 0\n\tistore %d\n", index);
+            }
             break;
         case I_Type:
             sprintf(input_tmp, "\tldc %d\n\tistore %d\n", _expr.i, index);
@@ -816,7 +834,7 @@ void gencode_func(Value _type, Value _id, int _num){
     fprintf(file, ".limit stack 50\n"
                   ".limit locals 50\n");
     fprintf(file, "%s", func_buf);
-    fprintf(file, ".end method");
+    fprintf(file, ".end method\n");
 
     printf("%s", input_tmp);
     printf("%s", ".limit stack 50\n.limit locals 50\n");
@@ -891,7 +909,8 @@ Value switch_assign_op(Value v1, Operator op, Value v2){
             return mul_arith(v1, v2);
         case DIV_ASSIGN_OPT:
             return div_arith(v1, v2);
-        case ASSIGN_OPT:
+        case ASSIGN_OPT: // b = a + 2;
+            get_id_value(v1);
             return v2;
         default:
             printf("wrong case in assign_op\n");
@@ -962,9 +981,12 @@ Value mul_arith(Value A, Value B){
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
         v_tmp.symbol_type = I_Type;
+        strcat(func_buf, "\timul\n");
         // v_tmp.i = (v1.i)*(v2.i);
     }else{
         v_tmp.symbol_type = F_Type;
+        strcat(func_buf, "\tfmul\n");
+
         // v_tmp.f = (v1.f)*(v2.f);
     }
     return v_tmp;
@@ -984,6 +1006,8 @@ Value div_arith(Value A, Value B){
     */
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
         v_tmp.symbol_type = I_Type;
+        strcat(func_buf, "\tidiv\n");
+
         // v_tmp.i = (v1.i)/(v2.i);
     }else{
         v_tmp.symbol_type = F_Type;
@@ -1000,6 +1024,8 @@ Value mod_arith(Value A, Value B){
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
         v_tmp.symbol_type = I_Type;
+        strcat(func_buf, "\tirem\n");
+
         // v_tmp.i = (v1.i)%(v2.i);
         return v_tmp;
     }else{
@@ -1018,9 +1044,13 @@ Value add_arith(Value A, Value B){
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
         v_tmp.symbol_type = I_Type;
+        strcat(func_buf, "\tiadd\n");
+
         // v_tmp.i = (v1.i)+(v2.i);
     }else{
         v_tmp.symbol_type = F_Type;
+        strcat(func_buf, "\tfadd\n");
+
         // v_tmp.f = (v1.f)+(v2.f);
     }
     return v_tmp;
@@ -1035,9 +1065,11 @@ Value minus_arith(Value A, Value B){
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
         v_tmp.symbol_type = I_Type;
+        strcat(func_buf, "\tisub\n");
         // v_tmp.i = (v1.i)-(v2.i);
     }else{
         v_tmp.symbol_type = F_Type;
+        strcat(func_buf, "\tfsub\n");
         // v_tmp.f = (v1.f)-(v2.f);
     }
     return v_tmp;
@@ -1046,12 +1078,31 @@ Value minus_arith(Value A, Value B){
 Value get_id_value(Value v){
     Value tmp;
     if(v.symbol_type == ID_Type){ //is id
-        // tmp.symbol_type = v.val_ptr.symbol_type;
+        return lookup_id(v);
     }else{
-        tmp = v;
-    }
+        char input_tmp[100];
+        memset(input_tmp, 0, sizeof(input_tmp));
+        switch (v.symbol_type){
+            case B_Type:
+                sprintf(input_tmp, "\tldc %d\n", v.i);
+                break;
+            case I_Type:
+                sprintf(input_tmp, "\tldc %d\n", v.i);
+                break;
+            case F_Type:
+                sprintf(input_tmp, "\tldc %f\n", v.f);
+                break;
+            case S_Type:
+                sprintf(input_tmp, "\tldc %s\n", v.s);
+                break;
+            default:
+                printf("wrong input in type\n");
+                break;
+        }
 
-    return tmp;
+        strcat(func_buf, input_tmp);
+        return v;
+    }
 }
 
 Value lookup_id(Value v){
@@ -1059,29 +1110,55 @@ Value lookup_id(Value v){
     char *name = v.id_name;
     Value tmp;
 
+    char input_tmp[100];
+    memset(input_tmp, 0 ,sizeof(input_tmp));
+    
     while(ptr != NULL){
         struct Entry *e_ptr = ptr->entry_header;
         while(e_ptr != NULL){
             if(strcmp(e_ptr->kind, "function") != 0 && strcmp(e_ptr->name, name) == 0){ //declared variable
-                //find id
-                if(strcmp(e_ptr->type, "int") == 0){
-                    tmp.symbol_type = I_Type;
-                }else if(strcmp(e_ptr->type, "float") == 0){
-                    tmp.symbol_type = F_Type;
-                }else if(strcmp(e_ptr->type, "string") == 0){
-                    tmp.symbol_type = S_Type;
-                }else if(strcmp(e_ptr->type, "bool") == 0){
-                    tmp.symbol_type = B_Type;
+                //find id & gencode 
+                if(ptr->table_depth == 0){ 
+                    //global variable
+                    if(strcmp(e_ptr->type, "int") == 0){
+                        sprintf(input_tmp, "\tgetstatic compiler_hw3/%s I\n", e_ptr->name);
+                        printf("\tgetstatic compiler_hw3/%s I\n", e_ptr->name);
+                        tmp.symbol_type = I_Type;
+                    }else if(strcmp(e_ptr->type, "float") == 0){
+                        sprintf(input_tmp, "\tgetstatic compiler_hw3/%s F\n", e_ptr->name);
+                        printf("\tgetstatic compiler_hw3/%s F\n", e_ptr->name);
+                        tmp.symbol_type = F_Type;
+                    }else if(strcmp(e_ptr->type, "string") == 0){
+                        sprintf(input_tmp, "\tgetstatic compiler_hw3/%s S\n", e_ptr->name);
+                        printf("\tgetstatic compiler_hw3/%s S\n", e_ptr->name);
+                        tmp.symbol_type = S_Type;
+                    }else if(strcmp(e_ptr->type, "bool") == 0){
+                        sprintf(input_tmp, "\tgetstatic compiler_hw3/%s Z\n", e_ptr->name);
+                        printf("\tgetstatic compiler_hw3/%s Z\n", e_ptr->name);
+                        tmp.symbol_type = B_Type;
+                    }else{
+                        printf("the wrong e_ptr->type global\n");
+                    }
                 }else{
-                    printf("the wrong e_ptr->type\n");
+                    //local variable
+                    sprintf(input_tmp, "\tiload %d\n", e_ptr->index);
+                    printf("\tiload %d\n", e_ptr->index);
+                    if(strcmp(e_ptr->type, "int") == 0){
+                        tmp.symbol_type = I_Type;
+                    }else if(strcmp(e_ptr->type, "float") == 0){
+                        tmp.symbol_type = F_Type;
+                    }else if(strcmp(e_ptr->type, "string") == 0){
+                        tmp.symbol_type = S_Type;
+                    }else if(strcmp(e_ptr->type, "bool") == 0){
+                        tmp.symbol_type = B_Type;
+                    }else{
+                        printf("the wrong e_ptr->type loacl\n");
+                    }
                 }
 
+                strcat(func_buf, input_tmp);
                 return tmp;
             }
-            /*
-            printf("%-10d%-10s%-12s%-10s%-10d%-10s\n",
-                e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope, e_ptr->attribute);
-            */
             e_ptr = e_ptr->entry_next;
         }
         ptr = ptr->pre;
