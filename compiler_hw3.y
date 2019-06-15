@@ -21,6 +21,8 @@ struct Entry{
     char type[20];
     int scope;
     char attribute[50];
+
+    Value entry_val;
 };
 
 struct Table{
@@ -69,6 +71,7 @@ Value switch_assign_op();
 Value switch_relation_op();
 Value switch_logic_op();
 Value get_id_value();
+Value lookup_id();
 
 
 //arithmetic
@@ -144,25 +147,11 @@ declaration
     : type ID '=' expression SEMICOLON  { lookup_symbol($2.id_name, 1); 
                                           if(error_flag != 1){
                                             insert_symbol($1, $2, type_v, $4);
-                                            /*
-                                            if(table_current->table_depth != 0){
-                                                gencode_local_1($1, $2, $4);
-                                            }else{
-                                                gencode_global_1($1, $2, $4);
-                                            }
-                                            */
                                           }
                                         }
     | type ID SEMICOLON { lookup_symbol($2.id_name, 1); 
                           if(error_flag != 1){
                             insert_symbol($1, $2, type_v, trash_var); 
-                            /*
-                            if(table_current->table_depth != 0){
-                                gencode_local_2($1, $2);
-                            }else{
-                                gencode_global_2($1, $2);
-                            } 
-                            */
                           }
                         }
 ;
@@ -487,27 +476,25 @@ void insert_symbol(Value v1, Value v2, char* k, Value v3) {
 
     if(strcmp(k, "function") == 0){
         get_attribute(e_ptr);
+    }else if(strcmp(k, "variable") == 0){      //paremeter and variable, generate to jasim 
+        if(table_current->table_depth == 0){
+            if(v3.symbol_type != 6)     //int a = 3;
+                gencode_global_1(v1, v2, v3);
+            else                        //int a;
+                gencode_global_2(v1, v2);
+        }else{
+            if(v3.symbol_type != 6)     //int a = 3;
+                gencode_local_1(v1, v2, v3, e_ptr->index);
+            else                        //int a;
+                gencode_local_2(v1, v2, e_ptr->index);
+        }
     }
  
     printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
-
-    // generate to jasim
-    if(table_current->table_depth == 0){
-        if(v3.symbol_type != 6)
-            gencode_global_1(v1, v2, v3);
-        else
-            gencode_global_2(v1, v2, v3);
-    }else{
-        if(v3.symbol_type != 6)
-            gencode_local_1(v1, v2);
-        else
-            gencode_local_2(v1, v2);
-    }
 }
 
 void get_attribute(struct Entry * tmp){
     // get entry_attribute
-    
     struct Entry *e_ptr = tmp;   //add function attribute
     struct Table *dump = table_dump;    //find parameter table
     struct Entry *e_dump = dump->entry_header; //find parameter entry
@@ -653,7 +640,7 @@ void gencode_global_1(Value _type, Value _id, Value _expr){
     memset(input_tmp, 0, sizeof(input_tmp));
     
     switch (_type.symbol_type){
-        case B_Type:
+        case B_Type:   /////////////////////////True or false
             sprintf(input_tmp, " %s Z = %d\n", _id.id_name, _expr.i);  
             break;
         case I_Type:
@@ -666,7 +653,7 @@ void gencode_global_1(Value _type, Value _id, Value _expr){
             sprintf(input_tmp, " %s S = %s\n", _id.id_name, _expr.s);
             break;
         default:
-            printf("wrong input in type");
+            printf("wrong input in type\n");
             break;
     }
 
@@ -697,7 +684,7 @@ void gencode_global_2(Value _type, Value _id){
             sprintf(input_tmp, " %s S\n", _id.id_name);
             break;
         default:
-            printf("wrong input in type");
+            printf("wrong input in type\n");
             break;
     }
 
@@ -706,7 +693,7 @@ void gencode_global_2(Value _type, Value _id){
 
 }
 
-void gencode_local_1(Value _type, Value _id, Value _expr){
+void gencode_local_1(Value _type, Value _id, Value _expr, int index){
     printf("in gencode_local_1\n");
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
@@ -715,22 +702,20 @@ void gencode_local_1(Value _type, Value _id, Value _expr){
         istore 0
     */
     switch (_type.symbol_type){
-        
-/*        case B_Type:
-            strcat(buf, "\tldc %d\n", _expr.i);
+        case B_Type:
+            sprintf(input_tmp, "\tldc %d\n\tistore %d\n", _expr.i, index);
             break;
-*/
         case I_Type:
-            sprintf(input_tmp, "\tldc %d\n\tistore %d\n", _expr.i, 0);
+            sprintf(input_tmp, "\tldc %d\n\tistore %d\n", _expr.i, index);
             break;
         case F_Type:
-            sprintf(input_tmp, "\tldc %f\n\tistore %d\n", _expr.f, 0);
+            sprintf(input_tmp, "\tldc %f\n\tistore %d\n", _expr.f, index);
             break;
         case S_Type:
-            sprintf(input_tmp, "\tldc %s\n\tistore %d\n", _expr.s, 0);
+            sprintf(input_tmp, "\tldc %s\n\tistore %d\n", _expr.s, index);
             break;
         default:
-            printf("wrong input in type");
+            printf("wrong input in type\n");
             break;
     }
 
@@ -738,27 +723,26 @@ void gencode_local_1(Value _type, Value _id, Value _expr){
     return;
 }
 
-void gencode_local_2(Value _type, Value _id){
+void gencode_local_2(Value _type, Value _id, int index){
     printf("in gencode_local_2\n");
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
 
     switch (_type.symbol_type){
-        
         case B_Type:
-            sprintf(input_tmp, "\tldc 0\nistore %d\n", 0);
+            sprintf(input_tmp, "\tldc 0\nistore %d\n", index);
             break;
         case I_Type:
-            sprintf(input_tmp, "\tldc 0\n\tistore %d\n", 0);
+            sprintf(input_tmp, "\tldc 0\n\tistore %d\n", index);
             break;
         case F_Type:
-            sprintf(input_tmp, "\tldc 0.0\n\tistore %d\n", 0);
+            sprintf(input_tmp, "\tldc 0.0\n\tistore %d\n", index);
             break;
         case S_Type:
-            sprintf(input_tmp, "\tldc \"\"\n\tistore %d\n", 0);
+            sprintf(input_tmp, "\tldc \"\"\n\tistore %d\n", index);
             break;
         default:
-            printf("wrong input in type");
+            printf("wrong input in type\n");
             break;
     }
 
@@ -823,11 +807,6 @@ void gencode_func(Value _type, Value _id, int _num){
         case V_Type:
             sprintf(input_tmp, ".method public static %s()V\n", _id.id_name);
             break;
-    /*    
-        case S_Type:
-            strcpy(type_tmp, "S");  //??????
-            break;        
-    */    
         default:
             printf("wrong input in type");
             break;
@@ -971,49 +950,57 @@ Value switch_logic_op(Value v1, Operator op, Value v2){
     }
 }
 
+
+
 //arithmetic function
-Value mul_arith(Value v1, Value v2){
+Value mul_arith(Value A, Value B){
     printf("in mul_arith\n");
+    Value v1 = get_id_value(A);
+    Value v2 = get_id_value(B);
     Value v_tmp;
     // memset(v_tmp, 0, sizeof(v_tmp));
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
         v_tmp.symbol_type = I_Type;
-        v_tmp.i = (v1.i)*(v2.i);
+        // v_tmp.i = (v1.i)*(v2.i);
     }else{
         v_tmp.symbol_type = F_Type;
-        v_tmp.f = (v1.f)*(v2.f);
+        // v_tmp.f = (v1.f)*(v2.f);
     }
     return v_tmp;
 }
 
-Value div_arith(Value v1, Value v2){
+Value div_arith(Value A, Value B){
     printf("in div_arith\n");
+    Value v1 = get_id_value(A);
+    Value v2 = get_id_value(B);
     Value v_tmp;
-
+    /*
     if(v2.i == 0){
         printf("v2 cannot be zero !!!");
         //yyerror;
         return v1;
     }
-
+    */
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
         v_tmp.symbol_type = I_Type;
-        v_tmp.i = (v1.i)/(v2.i);
+        // v_tmp.i = (v1.i)/(v2.i);
     }else{
         v_tmp.symbol_type = F_Type;
-        v_tmp.f = (v1.f)/(v2.f);
+        // v_tmp.f = (v1.f)/(v2.f);
     }
     return v_tmp;
 }
 
-Value mod_arith(Value v1, Value v2){
+Value mod_arith(Value A, Value B){
     printf("in mod_arith\n");
+    Value v1 = get_id_value(A);
+    Value v2 = get_id_value(B);
     Value v_tmp;
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
         v_tmp.symbol_type = I_Type;
-        v_tmp.i = (v1.i)%(v2.i);
+        // v_tmp.i = (v1.i)%(v2.i);
         return v_tmp;
     }else{
         printf("v1 v2 need to be I_Type\n");
@@ -1023,35 +1010,84 @@ Value mod_arith(Value v1, Value v2){
     return v_tmp;
 }
 
-Value add_arith(Value v1, Value v2){
+Value add_arith(Value A, Value B){
     printf("in add_arith\n");
+    Value v1 = get_id_value(A);
+    Value v2 = get_id_value(B);
     Value v_tmp;
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
         v_tmp.symbol_type = I_Type;
-        v_tmp.i = (v1.i)+(v2.i);
+        // v_tmp.i = (v1.i)+(v2.i);
     }else{
         v_tmp.symbol_type = F_Type;
-        v_tmp.f = (v1.f)+(v2.f);
+        // v_tmp.f = (v1.f)+(v2.f);
     }
     return v_tmp;
 
 }
 
-Value minus_arith(Value v1, Value v2){
+Value minus_arith(Value A, Value B){
     printf("in minus_arith\n");
+    Value v1 = get_id_value(A);
+    Value v2 = get_id_value(B);
     Value v_tmp;
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
         v_tmp.symbol_type = I_Type;
-        v_tmp.i = (v1.i)-(v2.i);
+        // v_tmp.i = (v1.i)-(v2.i);
     }else{
         v_tmp.symbol_type = F_Type;
-        v_tmp.f = (v1.f)-(v2.f);
+        // v_tmp.f = (v1.f)-(v2.f);
     }
     return v_tmp;
 }
 
 Value get_id_value(Value v){
+    Value tmp;
+    if(v.symbol_type == ID_Type){ //is id
+        // tmp.symbol_type = v.val_ptr.symbol_type;
+    }else{
+        tmp = v;
+    }
+
+    return tmp;
+}
+
+Value lookup_id(Value v){
+    struct Table *ptr = table_current;
+    char *name = v.id_name;
+    Value tmp;
+
+    while(ptr != NULL){
+        struct Entry *e_ptr = ptr->entry_header;
+        while(e_ptr != NULL){
+            if(strcmp(e_ptr->kind, "function") != 0 && strcmp(e_ptr->name, name) == 0){ //declared variable
+                //find id
+                if(strcmp(e_ptr->type, "int") == 0){
+                    tmp.symbol_type = I_Type;
+                }else if(strcmp(e_ptr->type, "float") == 0){
+                    tmp.symbol_type = F_Type;
+                }else if(strcmp(e_ptr->type, "string") == 0){
+                    tmp.symbol_type = S_Type;
+                }else if(strcmp(e_ptr->type, "bool") == 0){
+                    tmp.symbol_type = B_Type;
+                }else{
+                    printf("the wrong e_ptr->type\n");
+                }
+
+                return tmp;
+            }
+            /*
+            printf("%-10d%-10s%-12s%-10s%-10d%-10s\n",
+                e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope, e_ptr->attribute);
+            */
+            e_ptr = e_ptr->entry_next;
+        }
+        ptr = ptr->pre;
+    }
+
+    printf("Not Find ID -- undeclared variable !!!!\n");
+    return tmp;
 
 }
