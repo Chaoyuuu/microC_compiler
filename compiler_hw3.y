@@ -19,7 +19,6 @@ struct Entry{
     char name[20];     
     char kind[20];
     char type[20];
-    // int type;
     int scope;
     char attribute[50];
 };
@@ -47,7 +46,10 @@ extern int dump_flag;
 extern void yyerror(char *s);
 
 int func_flag = 0;
-FILE *file; // To generate .j file for Jasmin
+int para_num = 0;   //count parameter in function 
+char func_buf[500]; //buf for java bytecode function
+Value trash_var;     // for trash value parameter
+FILE *file;         // To generate .j file for Jasmin
 
 
 /* Symbol table function - you can add new function if needed. */
@@ -60,13 +62,13 @@ void dump_symbol();
 void dump_table();
 
 /* expression function */
-// Value do_assign();
 Value switch_mul_op();
 Value switch_addition_op();
 Value switch_postfix_op();
 Value switch_assign_op();
 Value switch_relation_op();
 Value switch_logic_op();
+Value get_id_value();
 
 
 //arithmetic
@@ -79,6 +81,9 @@ Value minus_arith(Value v1, Value v2);
 //code generation function
 void gencode_global_1();
 void gencode_global_2();
+void gencode_local_1();
+void gencode_local_2();
+void gencode_func();
 
 
 
@@ -136,16 +141,30 @@ stat
 ;
 
 declaration
-    : type ID '=' expression SEMICOLON  { printf("nooooooooo\n"); lookup_symbol($2.id_name, 1); 
+    : type ID '=' expression SEMICOLON  { lookup_symbol($2.id_name, 1); 
                                           if(error_flag != 1){
-                                            printf("nooooooooo\n"); 
-                                            insert_symbol($1, $2, type_v); 
-                                            printf("nooooooooo\n"); 
-                                            gencode_global_1($1, $2, $4);
+                                            insert_symbol($1, $2, type_v, $4);
+                                            /*
+                                            if(table_current->table_depth != 0){
+                                                gencode_local_1($1, $2, $4);
+                                            }else{
+                                                gencode_global_1($1, $2, $4);
+                                            }
+                                            */
                                           }
                                         }
-    | type ID SEMICOLON 
-        { lookup_symbol($2.id_name, 1); if(error_flag != 1) insert_symbol($1, $2, type_v); gencode_global_2($1, $2); }
+    | type ID SEMICOLON { lookup_symbol($2.id_name, 1); 
+                          if(error_flag != 1){
+                            insert_symbol($1, $2, type_v, trash_var); 
+                            /*
+                            if(table_current->table_depth != 0){
+                                gencode_local_2($1, $2);
+                            }else{
+                                gencode_global_2($1, $2);
+                            } 
+                            */
+                          }
+                        }
 ;
 
 print_func
@@ -214,8 +233,8 @@ postfix_expr
 ;
 
 parenthesis_expr
-    : initializer {}
-    | ID { lookup_function($1.id_name, 1); }
+    : initializer {}                           /* for constant */
+    | ID { lookup_function($1.id_name, 1); }   /* for function */
       declarator2 {}
     | '(' expression ')' { $$ = $2; }
 ;
@@ -269,18 +288,19 @@ return_statement
 ;
 
 function_declaration
-    : type ID declarator compound_stat 
-      { lookup_function($2.id_name, 3); 
-        if(func_flag != 1) 
-            insert_symbol($1.symbol_type, $2.id_name, type_f);
-        func_flag = 0;
-      }
-    | type ID declarator SEMICOLON
-      { dump_table(); 
-        lookup_function($2.id_name, 2); 
-        if(error_flag != 1) 
-            insert_symbol($1.symbol_type, $2.id_name, type_f);
-      }
+    : type ID declarator compound_stat  { lookup_function($2.id_name, 3); 
+                                          if(func_flag != 1){
+                                              insert_symbol($1, $2, type_f, trash_var);
+                                              gencode_func($1, $2, para_num);
+                                          }
+                                          func_flag = 0;
+                                        }
+    | type ID declarator SEMICOLON  { dump_table(); 
+                                      lookup_function($2.id_name, 2); 
+                                      if(error_flag != 1){
+                                        insert_symbol($1, $2, type_f, trash_var);
+                                      }
+                                    }
 ;
 
 declarator
@@ -292,9 +312,9 @@ declarator
 
 identifier_list
     : identifier_list ',' type ID 
-        { insert_symbol($3.symbol_type, $4.id_name, type_p); }
+        { insert_symbol($3, $4, type_p, trash_var); para_num++; }
     | type ID
-        { insert_symbol($1.symbol_type, $2.id_name, type_p); }
+        { insert_symbol($1, $2, type_p, trash_var); para_num++; }
 ;
 
 declarator2
@@ -337,6 +357,9 @@ type
 int main(int argc, char** argv)
 {
     yylineno = 0;
+    memset(func_buf, 0, sizeof(func_buf));  //init func_buf
+    trash_var.symbol_type = T_Type;         //init trash_var
+
 
     file = fopen("compiler_hw3.j","w");
     fprintf(file,   ".class public compiler_hw3\n"
@@ -403,15 +426,15 @@ void create_symbol() {
     printf("\n----in create_symbol, depth = %d, current = %p----\n", ptr->table_depth, table_current);
 }
 
-void insert_symbol(Value v1, Value v2, char* k) {
+void insert_symbol(Value v1, Value v2, char* k, Value v3) {
    
     struct Table *ptr = table_current; 
     struct Entry *e_ptr = malloc(sizeof(struct Entry));
 
     Symbol_type t = v1.symbol_type;
-    char *n = v2.id_name; 
+    char *n = v2.id_name;
     
-    printf("\n----in insert_symbol, %d, %s, %s, %d----\n", t, n, k, ptr->table_depth);
+    // printf("\n----in insert_symbol, %d, %s, %s, %d----\n", t, n, k, ptr->table_depth);
 
     if(ptr->entry_header == NULL){
         ptr->entry_header = e_ptr;
@@ -468,6 +491,18 @@ void insert_symbol(Value v1, Value v2, char* k) {
  
     printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
 
+    // generate to jasim
+    if(table_current->table_depth == 0){
+        if(v3.symbol_type != 6)
+            gencode_global_1(v1, v2, v3);
+        else
+            gencode_global_2(v1, v2, v3);
+    }else{
+        if(v3.symbol_type != 6)
+            gencode_local_1(v1, v2);
+        else
+            gencode_local_2(v1, v2);
+    }
 }
 
 void get_attribute(struct Entry * tmp){
@@ -610,49 +645,47 @@ void dump_symbol() {
 
 //code generation function
 void gencode_global_1(Value _type, Value _id, Value _expr){
+
     printf("in gencode_1\n");
     fprintf(file, ".field public static");
-    printf("?????????????\n");
+    printf(".field public static");
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
-    printf("?????????????\n");
-
+    
     switch (_type.symbol_type){
         case B_Type:
-            sprintf(input_tmp, " %s Z = %d\n", _id.id_name, _expr.i);  ///_expr.i ??????????
+            sprintf(input_tmp, " %s Z = %d\n", _id.id_name, _expr.i);  
             break;
         case I_Type:
             sprintf(input_tmp, " %s I = %d\n", _id.id_name, _expr.i);
             break;
         case F_Type:
             sprintf(input_tmp, " %s F = %f\n", _id.id_name, _expr.f);
-            break;
-    /*    
+            break;    
         case S_Type:
-            strcpy(type_tmp, "S");  //??????
+            sprintf(input_tmp, " %s S = %s\n", _id.id_name, _expr.s);
             break;
-        case V_Type:
-            strcpy(type_tmp, "V");  //?????
-            break;
-    */    
         default:
             printf("wrong input in type");
             break;
     }
 
     fprintf(file, "%s", input_tmp);
+    printf("%s", input_tmp);
 
 }
 
 void gencode_global_2(Value _type, Value _id){
     printf("in gencode_2\n");
     fprintf(file, ".field public static");
+    printf(".field public static");
+
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
 
     switch (_type.symbol_type){
         case B_Type:
-            sprintf(input_tmp, " %s Z\n", _id.id_name);  ///_expr.i ??????????
+            sprintf(input_tmp, " %s Z\n", _id.id_name);  
             break;
         case I_Type:
             sprintf(input_tmp, " %s I\n", _id.id_name);
@@ -660,21 +693,159 @@ void gencode_global_2(Value _type, Value _id){
         case F_Type:
             sprintf(input_tmp, " %s F\n", _id.id_name);
             break;
-    /*    
         case S_Type:
-            strcpy(type_tmp, "S");  //??????
+            sprintf(input_tmp, " %s S\n", _id.id_name);
             break;
-        case V_Type:
-            strcpy(type_tmp, "V");  //?????
-            break;
-    */    
         default:
             printf("wrong input in type");
             break;
     }
 
     fprintf(file, "%s", input_tmp);
+    printf("%s", input_tmp);
 
+}
+
+void gencode_local_1(Value _type, Value _id, Value _expr){
+    printf("in gencode_local_1\n");
+    char input_tmp[100];
+    memset(input_tmp, 0, sizeof(input_tmp));
+    /* Exapmle: int d = 3;
+        ldc 0
+        istore 0
+    */
+    switch (_type.symbol_type){
+        
+/*        case B_Type:
+            strcat(buf, "\tldc %d\n", _expr.i);
+            break;
+*/
+        case I_Type:
+            sprintf(input_tmp, "\tldc %d\n\tistore %d\n", _expr.i, 0);
+            break;
+        case F_Type:
+            sprintf(input_tmp, "\tldc %f\n\tistore %d\n", _expr.f, 0);
+            break;
+        case S_Type:
+            sprintf(input_tmp, "\tldc %s\n\tistore %d\n", _expr.s, 0);
+            break;
+        default:
+            printf("wrong input in type");
+            break;
+    }
+
+    strcat(func_buf, input_tmp);
+    return;
+}
+
+void gencode_local_2(Value _type, Value _id){
+    printf("in gencode_local_2\n");
+    char input_tmp[100];
+    memset(input_tmp, 0, sizeof(input_tmp));
+
+    switch (_type.symbol_type){
+        
+        case B_Type:
+            sprintf(input_tmp, "\tldc 0\nistore %d\n", 0);
+            break;
+        case I_Type:
+            sprintf(input_tmp, "\tldc 0\n\tistore %d\n", 0);
+            break;
+        case F_Type:
+            sprintf(input_tmp, "\tldc 0.0\n\tistore %d\n", 0);
+            break;
+        case S_Type:
+            sprintf(input_tmp, "\tldc \"\"\n\tistore %d\n", 0);
+            break;
+        default:
+            printf("wrong input in type");
+            break;
+    }
+
+    strcat(func_buf, input_tmp);
+    return;
+
+}
+
+void gencode_func(Value _type, Value _id, int _num){
+    printf("in gencode_func\n");
+    char input_tmp[100];
+    memset(input_tmp, 0, sizeof(input_tmp));
+
+    if(strcmp(_id.id_name, "main") == 0){   //if main function
+        fprintf(file, ".method public static main([Ljava/lang/String;)V\n");
+        fprintf(file, ".limit stack 50\n"
+                      ".limit locals 50\n");
+        fprintf(file, "%s", func_buf);
+
+        printf(".method public static main([Ljava/lang/String;)V\n");
+        printf(".limit stack 50\n.limit locals 50\n");
+        printf("%s", func_buf);
+        printf(".end method\n");
+
+        memset(func_buf, 0, sizeof(func_buf));
+        
+        return;
+    }
+
+    printf("theeeee %d\n", _num);
+
+    switch (_num){
+        case 0:
+            printf("the para_num is = %d", _num);
+            break;
+        case 1:
+            printf("the para_num is = %d", _num);
+            break;
+        case 2:
+            printf("the para_num is = %d", _num);
+            break;
+        case 3:
+            printf("the para_num is = %d", _num);
+            break;
+        default:
+            printf("out of range para_num\n");
+            break;
+    }
+
+    para_num = 0;
+
+    switch (_type.symbol_type){
+        case B_Type:
+            sprintf(input_tmp, ".method public static %s()Z\n", _id.id_name);  
+            break;
+        case I_Type:
+            sprintf(input_tmp, ".method public static %s()I\n", _id.id_name);
+            break;
+        case F_Type:
+            sprintf(input_tmp, ".method public static %s()F\n", _id.id_name);
+            break;
+        case V_Type:
+            sprintf(input_tmp, ".method public static %s()V\n", _id.id_name);
+            break;
+    /*    
+        case S_Type:
+            strcpy(type_tmp, "S");  //??????
+            break;        
+    */    
+        default:
+            printf("wrong input in type");
+            break;
+    }    
+
+    fprintf(file, "%s", input_tmp);
+    fprintf(file, ".limit stack 50\n"
+                  ".limit locals 50\n");
+    fprintf(file, "%s", func_buf);
+    fprintf(file, ".end method");
+
+    printf("%s", input_tmp);
+    printf("%s", ".limit stack 50\n.limit locals 50\n");
+    printf("%s", func_buf);
+    printf(".end method\n");
+
+    memset(func_buf, 0, sizeof(func_buf));        
+    return;
 }
 
 
@@ -879,4 +1050,8 @@ Value minus_arith(Value v1, Value v2){
         v_tmp.f = (v1.f)-(v2.f);
     }
     return v_tmp;
+}
+
+Value get_id_value(Value v){
+
 }
