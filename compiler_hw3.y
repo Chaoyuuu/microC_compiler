@@ -50,6 +50,7 @@ extern void yyerror(char *s);
 int func_flag = 0;
 char func_buf[500]; //buf for jasmin function
 char func_para[20]; //buf for function parameter
+Symbol_type return_type;  // record function return type;
 Value trash_var;     // for trash value parameter
 FILE *file;         // To generate .j file for Jasmin
 
@@ -89,6 +90,7 @@ void gencode_local_1();
 void gencode_local_2();
 void gencode_func();
 void gencode_print();
+void gencode_return();
 
 
 
@@ -274,8 +276,8 @@ assign_op
     | '='        { $$ = ASSIGN_OPT; }
 ;
 return_statement
-    : RETURN expression SEMICOLON
-    | RETURN SEMICOLON
+    : RETURN expression SEMICOLON { gencode_return($2); }
+    | RETURN SEMICOLON  { gencode_return(trash_var); }
 ;
 
 function_declaration
@@ -784,53 +786,69 @@ void gencode_func(Value _type, Value _id){
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
 
+    //return_type_checking
+    if( _type.symbol_type != return_type){
+        printf("return type error !!!!\n");
+        //yyerror
+    }
+
     if(strcmp(_id.id_name, "main") == 0){   //if main function
         fprintf(file, ".method public static main([Ljava/lang/String;)V\n");
-        fprintf(file, ".limit stack 50\n"
-                      ".limit locals 50\n");
-        fprintf(file, "%s", func_buf);
-
-        printf(".method public static main([Ljava/lang/String;)V\n");
-        printf(".limit stack 50\n.limit locals 50\n");
-        printf("%s", func_buf);
-        printf(".end method\n");
-
-        memset(func_buf, 0, sizeof(func_buf));
-        
-        return;
+    }else{
+        switch (_type.symbol_type){
+            case B_Type:
+                sprintf(input_tmp, ".method public static %s(%s)I\n", _id.id_name, func_para);  
+                break;
+            case I_Type:
+                sprintf(input_tmp, ".method public static %s(%s)I\n", _id.id_name, func_para);
+                break;
+            case F_Type:
+                sprintf(input_tmp, ".method public static %s(%s)F\n", _id.id_name, func_para);
+                break;
+            case V_Type:
+                sprintf(input_tmp, ".method public static %s(%s)V\n", _id.id_name, func_para);
+                break;
+            default:
+                printf("wrong input in type\n");
+                break;
+        }    
+        fprintf(file, "%s", input_tmp);
+        printf("%s", input_tmp);
     }
 
     
-    switch (_type.symbol_type){
-        case B_Type:
-            sprintf(input_tmp, ".method public static %s(%s)Z\n", _id.id_name, func_para);  
-            break;
-        case I_Type:
-            sprintf(input_tmp, ".method public static %s(%s)I\n", _id.id_name, func_para);
-            break;
-        case F_Type:
-            sprintf(input_tmp, ".method public static %s(%s)F\n", _id.id_name, func_para);
-            break;
-        case V_Type:
-            sprintf(input_tmp, ".method public static %s(%s)V\n", _id.id_name, func_para);
-            break;
-        default:
-            printf("wrong input in type\n");
-            break;
-    }    
-
-    fprintf(file, "%s", input_tmp);
-    fprintf(file, ".limit stack 50\n"
-                  ".limit locals 50\n");
+    fprintf(file, ".limit stack 50\n.limit locals 50\n");
     fprintf(file, "%s", func_buf);
     fprintf(file, ".end method\n");
 
-    printf("%s", input_tmp);
     printf("%s", ".limit stack 50\n.limit locals 50\n");
     printf("%s", func_buf);
     printf(".end method\n");
 
     memset(func_buf, 0, sizeof(func_buf));       
+    return;
+}
+
+void gencode_return(Value v){
+    printf("in gencode_return\n");
+    
+    return_type = v.symbol_type;
+
+    switch(v.symbol_type){
+        case I_Type:
+        case B_Type:
+            strcat(func_buf, "\tireturn\n");
+            break;
+        case F_Type:
+            strcat(func_buf, "\tfreturn\n");
+            break;
+        case T_Type:
+            strcat(func_buf, "\treturn\n");
+            break;
+        default:
+            printf("wrong return type\n");
+            break;
+    }
     return;
 }
 
