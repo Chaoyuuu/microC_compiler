@@ -48,12 +48,14 @@ extern int dump_flag;
 extern void yyerror(char *s);
 
 int func_flag = 0;
+int cast_flag = 0;          // flag for arith casting
+Symbol_type cast_type;      // for arith casting
 char func_buf[500];         // buf for jasmin function
 char func_para[20];         // buf for function parameter
 char label_buf[500];        // buf for if-else {compond statement}
 int label_index = 0;        // index of if-else label
 int func_input_num = 0;     // index of func_input[]
-Symbol_type func_input[10]; // buf for function input parameter
+Value func_input[10]; // buf for function input parameter
 Symbol_type return_type;    // record function return type;
 Value trash_var;     // for trash value parameter
 FILE *file;         // To generate .j file for Jasmin
@@ -88,7 +90,7 @@ Value minus_arith(Value v1, Value v2);
 Value lookup_id();
 Value lookup_id_istore();
 Symbol_type lookup_id_return();
-Symbol_type lookup_id_type();
+Value lookup_id_type();
 void input_checking();
 
 //code generation function
@@ -178,18 +180,20 @@ compound_stat
 ;
 
 expression_stat
-    : selection_statement 
+    : selection_statement { printf("&&&&&&&& is select\n");}
     | while_statement 
-    | expression SEMICOLON
+    | expression SEMICOLON { printf("&&&&&&&&is expression\n");}
     | return_statement 
 ;
 
 selection_statement
     : IF { create_symbol(); }
       '(' expression ')' compound_stat
-    | ELSE { create_symbol(); } 
+    | selection_statement
+      ELSE { create_symbol(); } 
       compound_stat
-    | ELSE IF{ create_symbol(); }
+    | selection_statement
+      ELSE IF{ create_symbol(); }
       '(' expression ')' compound_stat
 ;
 
@@ -324,18 +328,18 @@ identifier_list2
     : identifier_list2 ',' expression   { if($3.symbol_type == ID_Type)
                                             func_input[func_input_num++] = lookup_id_type($3); 
                                           else
-                                            func_input[func_input_num++] = $3.symbol_type; 
+                                            func_input[func_input_num++] = $3; 
 
                                          //load variable
-                                          get_id_value($3);
+                                         // get_id_value($3, 0);
                                         }
     | expression    { if($1.symbol_type == ID_Type)
                         func_input[func_input_num++] = lookup_id_type($1); 
                       else
-                        func_input[func_input_num++] = $1.symbol_type; 
+                        func_input[func_input_num++] = $1; 
 
                       //load variable
-                      get_id_value($1);
+                      //get_id_value($1, 0);
                     }
 ;
 
@@ -369,8 +373,11 @@ type
 int main(int argc, char** argv)
 {
     yylineno = 0;
+
+    //init
     memset(func_buf, 0, sizeof(func_buf));  //init func_buf
     trash_var.symbol_type = T_Type;         //init trash_var
+    cast_type = T_Type;
 
 
     file = fopen("compiler_hw3.j","w");
@@ -501,19 +508,20 @@ void insert_symbol(Value v1, Value v2, char* k, Value v3) {
         get_attribute(e_ptr);
         gencode_func(v1, v2);
     }else if(strcmp(k, "variable") == 0){      //paremeter and variable, generate to jasim 
-        //set e_ptr->entry_val
-        // if(strcmp(e_ptr->type, "int") == 0){
-        //     e_ptr->entry_val.symbol_type = I_Type;
-        //     e_ptr->entry_val.i = 
-        // }else if(strcmp(e_ptr->type, "float") == 0){
-        //     e_ptr->entry_val.symbol_type = F_Type;
-        // }else if(strcmp(e_ptr->type, "string") == 0){
-        //     e_ptr->entry_val.symbol_type = S_Type;
-        // }else if(strcmp(e_ptr->type, "bool") == 0){
-        //     e_ptr->entry_val.symbol_type = B_Type;
-        // }else{
-        //     printf("the wrong e_ptr->type\n");
-        // }
+        
+        // set e_ptr->entry_val
+        if(strcmp(e_ptr->type, "int") == 0){
+            e_ptr->entry_val.symbol_type = I_Type;
+            e_ptr->entry_val.val_ptr.i = v3.i;
+        }else if(strcmp(e_ptr->type, "float") == 0){
+            e_ptr->entry_val.symbol_type = F_Type;
+        }else if(strcmp(e_ptr->type, "string") == 0){
+            e_ptr->entry_val.symbol_type = S_Type;
+        }else if(strcmp(e_ptr->type, "bool") == 0){
+            e_ptr->entry_val.symbol_type = B_Type;
+        }else{
+            printf("the wrong e_ptr->type\n");
+        }
 
         if(table_current->table_depth == 0){
             if(v3.symbol_type != 6)     //int a = 3;
@@ -759,10 +767,10 @@ void gencode_local_1(Value _type, Value _id, Value _expr, int index){
             sprintf(input_tmp, "\tldc %d\n\tistore %d\n", _expr.i, index);
             break;
         case F_Type:
-            sprintf(input_tmp, "\tldc %f\n\tistore %d\n", _expr.f, index);
+            sprintf(input_tmp, "\tldc %f\n\tfstore %d\n", _expr.f, index);
             break;
         case S_Type:
-            sprintf(input_tmp, "\tldc %s\n\tistore %d\n", _expr.s, index);
+            sprintf(input_tmp, "\tldc \"%s\"\n\tastore %d\n", _expr.s, index);
             break;
         default:
             printf("wrong input in type, gencode_local_1\n");
@@ -786,10 +794,10 @@ void gencode_local_2(Value _type, Value _id, int index){
             sprintf(input_tmp, "\tldc 0\n\tistore %d\n", index);
             break;
         case F_Type:
-            sprintf(input_tmp, "\tldc 0.0\n\tistore %d\n", index);
+            sprintf(input_tmp, "\tldc 0.0\n\tfstore %d\n", index);
             break;
         case S_Type:
-            sprintf(input_tmp, "\tldc \"\"\n\tistore %d\n", index);
+            sprintf(input_tmp, "\tldc \"\"\n\tastore %d\n", index);
             break;
         default:
             printf("wrong input in type, gencode_local_2\n");
@@ -812,7 +820,8 @@ void gencode_func(Value _type, Value _id){
         printf("return type error !!!!\n");
         //yyerror
     }
-
+    
+    printf(" the name = %s\n", _id.id_name);
     if(strcmp(_id.id_name, "main") == 0){   //if main function
         fprintf(file, ".method public static main([Ljava/lang/String;)V\n");
     }else{
@@ -867,18 +876,18 @@ void gencode_return(Value v){
     switch(v.symbol_type){
         case I_Type:
         case B_Type:
-            get_id_value(v); 
+            get_id_value(v, 0); 
             strcat(func_buf, "\tireturn\n"); 
             break;
         case F_Type:
-            get_id_value(v);
+            get_id_value(v, 0);
             strcat(func_buf, "\tfreturn\n");
             break;
         case V_Type:
             strcat(func_buf, "\treturn\n");
             break;
         case ID_Type:
-            get_id_value(v);
+            get_id_value(v, 0);
             return_type = lookup_id_return(v);  
             break;
         default:
@@ -893,7 +902,12 @@ void gencode_print(Value v){ // only print int, float, string variables and cons
     //1. getstatic
     //2. put something on TOS
     //3. invokevirtural
-    Value tmp = lookup_id(v);
+    Value tmp;
+    if(v.symbol_type == ID_Type)
+        tmp = lookup_id(v);
+    else
+        tmp.symbol_type = v.symbol_type;
+
     strcat(func_buf, "\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n\tswap\n");
 
     switch(tmp.symbol_type){
@@ -990,6 +1004,13 @@ Value switch_assign_op(Value v1, Operator op, Value v2){
             break;
     }
 
+    //assign casting
+    if(v1.symbol_type == I_Type && tmp.symbol_type == F_Type){
+        strcat(func_buf, "f2i");
+    }else if(v1.symbol_type == F_Type && tmp.symbol_type == I_Type){
+        strcat(func_buf, "i2f");
+    }
+
     lookup_id_istore(v1);
     return tmp;
 }
@@ -997,8 +1018,9 @@ Value switch_assign_op(Value v1, Operator op, Value v2){
 Value switch_relation_op(Value A, Operator op, Value B){
     printf("in switch_relation_op\n");
     //no need to consider type casting && no counting, only need to return type
-    Value v1 = get_id_value(A);
-    Value v2 = get_id_value(B);
+    cast_type = T_Type;
+    Value v1 = get_id_value(A, 1);
+    Value v2 = get_id_value(B, 1);
     Value tmp;
     tmp.symbol_type = B_Type; 
 
@@ -1079,8 +1101,12 @@ Value switch_logic_op(Value v1, Operator op, Value v2){
 //arithmetic function
 Value mul_arith(Value A, Value B){
     printf("in mul_arith\n");
-    Value v1 = get_id_value(A);
-    Value v2 = get_id_value(B);
+    
+    Value v1 = get_id_value(A, 1);
+    cast_type = v1.symbol_type;
+    Value v2 = get_id_value(B, 1);
+    cast_type = T_Type;
+
     Value v_tmp;
     // memset(v_tmp, 0, sizeof(v_tmp));
 
@@ -1099,8 +1125,12 @@ Value mul_arith(Value A, Value B){
 
 Value div_arith(Value A, Value B){
     printf("in div_arith\n");
-    Value v1 = get_id_value(A);
-    Value v2 = get_id_value(B);
+    
+    Value v1 = get_id_value(A, 1);
+    cast_type = v1.symbol_type;
+    Value v2 = get_id_value(B, 1);
+    cast_type = T_Type;
+
     Value v_tmp;
     /*
     if(v2.i == 0){
@@ -1123,8 +1153,12 @@ Value div_arith(Value A, Value B){
 
 Value mod_arith(Value A, Value B){
     printf("in mod_arith\n");
-    Value v1 = get_id_value(A);
-    Value v2 = get_id_value(B);
+
+    Value v1 = get_id_value(A, 1);
+    cast_type = v1.symbol_type;
+    Value v2 = get_id_value(B, 1);
+    cast_type = T_Type;
+
     Value v_tmp;
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
@@ -1143,8 +1177,12 @@ Value mod_arith(Value A, Value B){
 
 Value add_arith(Value A, Value B){
     printf("in add_arith\n");
-    Value v1 = get_id_value(A);
-    Value v2 = get_id_value(B);
+    
+    Value v1 = get_id_value(A, 1);
+    cast_type = v1.symbol_type;
+    Value v2 = get_id_value(B, 1);
+    cast_type = T_Type;
+
     Value v_tmp;
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
@@ -1159,13 +1197,16 @@ Value add_arith(Value A, Value B){
         // v_tmp.f = (v1.f)+(v2.f);
     }
     return v_tmp;
-
 }
 
 Value minus_arith(Value A, Value B){
     printf("in minus_arith\n");
-    Value v1 = get_id_value(A);
-    Value v2 = get_id_value(B);
+    
+    Value v1 = get_id_value(A, 1);
+    cast_type = v1.symbol_type;
+    Value v2 = get_id_value(B, 1);
+    cast_type = T_Type;
+
     Value v_tmp;
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){
@@ -1180,10 +1221,10 @@ Value minus_arith(Value A, Value B){
     return v_tmp;
 }
 
-Value get_id_value(Value v){
+Value get_id_value(Value v, int flag){
 
     if(v.symbol_type == ID_Type){ //is id
-        return lookup_id(v);
+        return lookup_id(v, flag);
     }else{
         char input_tmp[100];
         memset(input_tmp, 0, sizeof(input_tmp));
@@ -1193,8 +1234,16 @@ Value get_id_value(Value v){
                 break;
             case I_Type:
                 sprintf(input_tmp, "\tldc %d\n", v.i);
+                //type casting
+                if(cast_type == F_Type)
+                    strcat(func_buf, "\ti2f\n");
+                //
                 break;
             case F_Type:
+                //type casting
+                if(cast_type == I_Type)
+                    strcat(func_buf, "\ti2f\n");
+                //
                 sprintf(input_tmp, "\tldc %f\n", v.f);
                 break;
             case S_Type:
@@ -1210,7 +1259,7 @@ Value get_id_value(Value v){
     }
 }
 
-Value lookup_id(Value v){
+Value lookup_id(Value v, int flag){
     struct Table *ptr = table_current;
     char *name = v.id_name;
     Value tmp;
@@ -1228,7 +1277,13 @@ Value lookup_id(Value v){
                     if(strcmp(e_ptr->type, "int") == 0 || strcmp(e_ptr->type, "bool") == 0){
                         sprintf(input_tmp, "\tgetstatic compiler_hw3/%s I\n", e_ptr->name);
                         tmp.symbol_type = I_Type;
+                        //type casting
+                        if(cast_type == F_Type)
+                            strcat(func_buf, "\ti2f\n");
                     }else if(strcmp(e_ptr->type, "float") == 0){
+                        //type casting
+                        if(cast_type == I_Type)
+                            strcat(func_buf, "\ti2f\n");
                         sprintf(input_tmp, "\tgetstatic compiler_hw3/%s F\n", e_ptr->name);
                         tmp.symbol_type = F_Type;
                     }else if(strcmp(e_ptr->type, "string") == 0){
@@ -1242,15 +1297,23 @@ Value lookup_id(Value v){
                     }
                 }else{
                     //local variable
-                    sprintf(input_tmp, "\tiload %d\n", e_ptr->index);
-                    printf("\tiload %d\n", e_ptr->index);
                     if(strcmp(e_ptr->type, "int") == 0){
+                        sprintf(input_tmp, "\tiload %d\n", e_ptr->index);
                         tmp.symbol_type = I_Type;
+                        //type casting
+                        if(cast_type == F_Type)
+                            strcat(func_buf, "\ti2f\n");
                     }else if(strcmp(e_ptr->type, "float") == 0){
+                        //type casting
+                        if(cast_type == I_Type)
+                            strcat(func_buf, "\ti2f\n");
+                        sprintf(input_tmp, "\tfload %d\n", e_ptr->index);
                         tmp.symbol_type = F_Type;
                     }else if(strcmp(e_ptr->type, "string") == 0){
+                        sprintf(input_tmp, "\taload %d\n", e_ptr->index);
                         tmp.symbol_type = S_Type;
                     }else if(strcmp(e_ptr->type, "bool") == 0){
+                        sprintf(input_tmp, "\tiload %d\n", e_ptr->index);
                         tmp.symbol_type = B_Type;
                     }else{
                         printf("the wrong e_ptr->type loacl\n");
@@ -1282,46 +1345,10 @@ Value lookup_id_istore(Value v){  // nothing to return, Void ???
     while(ptr != NULL){
         struct Entry *e_ptr = ptr->entry_header;
         while(e_ptr != NULL){
-            if(strcmp(e_ptr->kind, "function") != 0 && strcmp(e_ptr->name, name) == 0){ //declared variable
-                //find id & gencode 
-                // if(ptr->table_depth == 0){ 
-                //     //global variable
-                //     if(strcmp(e_ptr->type, "int") == 0){
-                //         sprintf(input_tmp, "\tgetstatic compiler_hw3/%s I\n", e_ptr->name);
-                //         printf("\tgetstatic compiler_hw3/%s I\n", e_ptr->name);
-                //         tmp.symbol_type = I_Type;
-                //     }else if(strcmp(e_ptr->type, "float") == 0){
-                //         sprintf(input_tmp, "\tgetstatic compiler_hw3/%s F\n", e_ptr->name);
-                //         printf("\tgetstatic compiler_hw3/%s F\n", e_ptr->name);
-                //         tmp.symbol_type = F_Type;
-                //     }else if(strcmp(e_ptr->type, "string") == 0){
-                //         sprintf(input_tmp, "\tgetstatic compiler_hw3/%s S\n", e_ptr->name);
-                //         printf("\tgetstatic compiler_hw3/%s S\n", e_ptr->name);
-                //         tmp.symbol_type = S_Type;
-                //     }else if(strcmp(e_ptr->type, "bool") == 0){
-                //         sprintf(input_tmp, "\tgetstatic compiler_hw3/%s Z\n", e_ptr->name);
-                //         printf("\tgetstatic compiler_hw3/%s Z\n", e_ptr->name);
-                //         tmp.symbol_type = B_Type;
-                //     }else{
-                //         printf("the wrong e_ptr->type global\n");
-                //     }
-                // }else{
-                    //local variable
-                    sprintf(input_tmp, "\tistore %d\n", e_ptr->index);
-                    printf("\tistore %d\n", e_ptr->index);
-                    // if(strcmp(e_ptr->type, "int") == 0){
-                    //     tmp.symbol_type = I_Type;
-                    // }else if(strcmp(e_ptr->type, "float") == 0){
-                    //     tmp.symbol_type = F_Type;
-                    // }else if(strcmp(e_ptr->type, "string") == 0){
-                    //     tmp.symbol_type = S_Type;
-                    // }else if(strcmp(e_ptr->type, "bool") == 0){
-                    //     tmp.symbol_type = B_Type;
-                    // }else{
-                    //     printf("the wrong e_ptr->type loacl\n");
-                    // }
-                // }
-
+            if(strcmp(e_ptr->kind, "function") != 0 && strcmp(e_ptr->name, name) == 0){ //declared variable   
+                //local variable
+                sprintf(input_tmp, "\tistore %d\n", e_ptr->index);
+                printf("\tistore %d\n", e_ptr->index);
                 strcat(func_buf, input_tmp);
                 return tmp;
             }
@@ -1366,9 +1393,11 @@ Symbol_type lookup_id_return(Value v){
 
 }
 
-Symbol_type lookup_id_type(Value v){
+Value lookup_id_type(Value v){
     printf("in lookup_id_type\n");
     struct Table *ptr = table_current;
+    Value tmp;
+    tmp = v;
 
     while(ptr != NULL){
         struct Entry *e_ptr = ptr->entry_header;
@@ -1377,16 +1406,18 @@ Symbol_type lookup_id_type(Value v){
                 //find id & gencode 
                 
                 if(strcmp(e_ptr->type, "int") == 0){
-                    return I_Type;
+                    tmp.symbol_type = I_Type;
                 }else if(strcmp(e_ptr->type, "float") == 0){
-                    return F_Type;
+                    tmp.symbol_type = F_Type;
                 }else if(strcmp(e_ptr->type, "bool") == 0){
-                    return B_Type;
+                    tmp.symbol_type = B_Type;
                 }else if(strcmp(e_ptr->type, "string") == 0){
-                    return S_Type;
+                    tmp.symbol_type = S_Type;
                 }else{
                     printf("the wrong e_ptr->type local\n");
                 }
+
+                return tmp;
             }
             e_ptr = e_ptr->entry_next;
         }
@@ -1394,7 +1425,7 @@ Symbol_type lookup_id_type(Value v){
     }
 
     printf("Not Find ID -- lookup_id_type !!!!\n");
-    return T_Type;
+    return tmp;
 }
 
 //error detecting
@@ -1434,7 +1465,7 @@ void input_checking(Value v){     //input parameter checking & gencode function 
                     strcat(attrt_tmp, "F");
                 }else if(strcmp(token, "string") == 0){
                     tmp[tmp_index++] = S_Type;
-                    strcat(attrt_tmp, "S");
+                    strcat(attrt_tmp, "");
                 }else if(strcmp(token, "bool") == 0){
                     tmp[tmp_index++] = B_Type;
                     strcat(attrt_tmp, "I");
@@ -1471,7 +1502,7 @@ void input_checking(Value v){     //input parameter checking & gencode function 
     }
 
     for(int i=0; i<tmp_index; i++){
-        if(func_input[i] != tmp[i]){
+        if(func_input[i].symbol_type != tmp[i]){
             printf("different input type!!!\n");
             //yyerror
         }
