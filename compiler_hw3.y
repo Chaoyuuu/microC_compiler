@@ -185,10 +185,9 @@ expression_stat
 selection_statement
     : IF { create_symbol(); }
       '(' expression ')' compound_stat
-    | /* selection_statement */
-      ELSE { create_symbol(); } compound_stat
-    | /* selection_statement */
-      ELSE IF{ create_symbol(); }
+    | ELSE { create_symbol(); } 
+      compound_stat
+    | ELSE IF{ create_symbol(); }
       '(' expression ')' compound_stat
 ;
 
@@ -492,7 +491,7 @@ void insert_symbol(Value v1, Value v2, char* k, Value v3) {
             strcpy(e_ptr->type, "bool");
             break;
         default:
-            printf("wrong input in type");
+            printf("wrong input in type insert_symbol");
             break;
     }
 
@@ -702,7 +701,7 @@ void gencode_global_1(Value _type, Value _id, Value _expr){
             sprintf(input_tmp, " %s Ljava/lang/String; = \"%s\"\n", _id.id_name, _expr.s);
             break;
         default:
-            printf("wrong input in type\n");
+            printf("wrong input in type, gencode_global_1\n");
             break;
     }
 
@@ -733,7 +732,7 @@ void gencode_global_2(Value _type, Value _id){
             sprintf(input_tmp, " %s Ljava/lang/String;\n", _id.id_name);
             break;
         default:
-            printf("wrong input in type\n");
+            printf("wrong input in type, gencode_global_2\n");
             break;
     }
 
@@ -764,7 +763,7 @@ void gencode_local_1(Value _type, Value _id, Value _expr, int index){
             sprintf(input_tmp, "\tldc %s\n\tistore %d\n", _expr.s, index);
             break;
         default:
-            printf("wrong input in type\n");
+            printf("wrong input in type, gencode_local_1\n");
             break;
     }
 
@@ -791,7 +790,7 @@ void gencode_local_2(Value _type, Value _id, int index){
             sprintf(input_tmp, "\tldc \"\"\n\tistore %d\n", index);
             break;
         default:
-            printf("wrong input in type\n");
+            printf("wrong input in type, gencode_local_2\n");
             break;
     }
 
@@ -807,6 +806,7 @@ void gencode_func(Value _type, Value _id){
 
     //return_type_checking
     if( _type.symbol_type != return_type){
+        printf("---%d, %d\n", _type.symbol_type, return_type);
         printf("return type error !!!!\n");
         //yyerror
     }
@@ -828,7 +828,7 @@ void gencode_func(Value _type, Value _id){
                 sprintf(input_tmp, ".method public static %s(%s)V\n", _id.id_name, func_para);
                 break;
             default:
-                printf("wrong input in type\n");
+                printf("wrong input in type, gencode function\n");
                 break;
         }    
         fprintf(file, "%s", input_tmp);
@@ -850,23 +850,35 @@ void gencode_func(Value _type, Value _id){
 
 void gencode_return(Value v){
     printf("in gencode_return\n");
+    /* Example: return a;
+        iload 0 / getstatic ... <- get_id_value
+        ireturn                 <- strcat(func_buf) or lookup_id_return();
+    */
     
+    if(v.symbol_type == T_Type){
+        v.symbol_type = V_Type;
+    }
+
+    //set return_type for function type checking in gencode_func
     return_type = v.symbol_type;
-    get_id_value(v);
 
     switch(v.symbol_type){
         case I_Type:
         case B_Type:
-            strcat(func_buf, "\tireturn\n");
+            get_id_value(v); 
+            strcat(func_buf, "\tireturn\n"); 
             break;
         case F_Type:
+            get_id_value(v);
             strcat(func_buf, "\tfreturn\n");
             break;
-        case T_Type:
+        case V_Type:
             strcat(func_buf, "\treturn\n");
             break;
         case ID_Type:
-            return_type =  lookup_id_return(v);  
+            get_id_value(v);
+            return_type = lookup_id_return(v);  
+            break;
         default:
             printf("wrong return type\n");
             break;
@@ -1138,7 +1150,7 @@ Value minus_arith(Value A, Value B){
 }
 
 Value get_id_value(Value v){
-    Value tmp;
+
     if(v.symbol_type == ID_Type){ //is id
         return lookup_id(v);
     }else{
@@ -1158,7 +1170,7 @@ Value get_id_value(Value v){
                 sprintf(input_tmp, "\tldc \"%s\"\n", v.s);
                 break;
             default:
-                printf("wrong input in type\n");
+                printf("wrong input in type get_id_value\n");
                 break;
         }
 
