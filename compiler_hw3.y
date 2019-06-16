@@ -50,7 +50,9 @@ extern void yyerror(char *s);
 int func_flag = 0;
 char func_buf[500]; //buf for jasmin function
 char func_para[20]; //buf for function parameter
-Symbol_type return_type;  // record function return type;
+int func_input_num = 0;     // index of func_input[]
+Symbol_type func_input[10]; //buf for function input parameter
+Symbol_type return_type;    // record function return type;
 Value trash_var;     // for trash value parameter
 FILE *file;         // To generate .j file for Jasmin
 
@@ -72,9 +74,6 @@ Value switch_assign_op();
 Value switch_relation_op();
 Value switch_logic_op();
 Value get_id_value();
-Value lookup_id();
-Value lookup_id_istore();
-
 
 //arithmetic
 Value mul_arith(Value v1, Value v2);
@@ -82,6 +81,13 @@ Value div_arith(Value v1, Value v2);
 Value mod_arith(Value v1, Value v2);
 Value add_arith(Value v1, Value v2);
 Value minus_arith(Value v1, Value v2);
+
+//error detecting && tool
+Value lookup_id();
+Value lookup_id_istore();
+Symbol_type lookup_id_return();
+Symbol_type lookup_id_type();
+void input_checking();
 
 //code generation function
 void gencode_global_1();
@@ -91,8 +97,6 @@ void gencode_local_2();
 void gencode_func();
 void gencode_print();
 void gencode_return();
-
-
 
 %}
 
@@ -228,7 +232,7 @@ postfix_expr
 parenthesis_expr
     : initializer {}                           /* for constant */
     | ID { lookup_function($1.id_name, 1); }   /* for function */
-      declarator2 {}
+      declarator2 { input_checking($1); } 
     | '(' expression ')' { $$ = $2; }
 ;
 
@@ -275,6 +279,7 @@ assign_op
     | MOD_ASSIGN { $$ = MOD_ASSIGN_OPT; }
     | '='        { $$ = ASSIGN_OPT; }
 ;
+
 return_statement
     : RETURN expression SEMICOLON { gencode_return($2); }
     | RETURN SEMICOLON  { gencode_return(trash_var); }
@@ -315,8 +320,22 @@ declarator2
 ;
 
 identifier_list2
-    : identifier_list2 ',' expression 
-    | expression
+    : identifier_list2 ',' expression   { if($3.symbol_type == ID_Type)
+                                            func_input[func_input_num++] = lookup_id_type($3); 
+                                          else
+                                            func_input[func_input_num++] = $3.symbol_type; 
+
+                                         //load variable
+                                          get_id_value($3);
+                                        }
+    | expression    { if($1.symbol_type == ID_Type)
+                        func_input[func_input_num++] = lookup_id_type($1); 
+                      else
+                        func_input[func_input_num++] = $1.symbol_type; 
+
+                      //load variable
+                      get_id_value($1);
+                    }
 ;
 
 initializer
@@ -517,6 +536,8 @@ void get_attribute(struct Entry * tmp){
     struct Table *dump = table_dump;    //find parameter table
     struct Entry *e_dump = dump->entry_header; //find parameter entry
 
+    memset(func_para, 0, sizeof(func_para));
+
     while(e_dump != NULL){
         if(strcmp(e_dump->kind, "parameter") == 0){
             //set function attribute to symbol table
@@ -526,7 +547,6 @@ void get_attribute(struct Entry * tmp){
             strcat(e_ptr->attribute, e_dump->type);
 
             //set function parameter type to jasmin
-            memset(func_para, 0, sizeof(func_para));
             if(strcmp(e_dump->type, "int") == 0 || strcmp(e_dump->type, "bool") == 0){
                 strcat(func_para, "I");
             }else if(strcmp(e_dump->type, "float") == 0){
@@ -539,8 +559,8 @@ void get_attribute(struct Entry * tmp){
         }
         e_dump = e_dump->entry_next;
     }
-
     // printf("\nin get_attribute = %s\n", e_ptr->attribute);
+    return;
 }
 
 void lookup_symbol(char* name, int flag) {
@@ -585,7 +605,6 @@ void lookup_symbol(char* name, int flag) {
 
 void lookup_function(char *name, int flag){
     // printf("\nin lookup_function\n");
-
     struct Table * ptr = table_current;
 
     if(flag == 1){   //Undeclared function
@@ -833,6 +852,7 @@ void gencode_return(Value v){
     printf("in gencode_return\n");
     
     return_type = v.symbol_type;
+    get_id_value(v);
 
     switch(v.symbol_type){
         case I_Type:
@@ -845,6 +865,8 @@ void gencode_return(Value v){
         case T_Type:
             strcat(func_buf, "\treturn\n");
             break;
+        case ID_Type:
+            return_type =  lookup_id_return(v);  
         default:
             printf("wrong return type\n");
             break;
@@ -1162,19 +1184,15 @@ Value lookup_id(Value v){
                     //global variable
                     if(strcmp(e_ptr->type, "int") == 0 || strcmp(e_ptr->type, "bool") == 0){
                         sprintf(input_tmp, "\tgetstatic compiler_hw3/%s I\n", e_ptr->name);
-                        printf("\tgetstatic compiler_hw3/%s I\n", e_ptr->name);
                         tmp.symbol_type = I_Type;
                     }else if(strcmp(e_ptr->type, "float") == 0){
                         sprintf(input_tmp, "\tgetstatic compiler_hw3/%s F\n", e_ptr->name);
-                        printf("\tgetstatic compiler_hw3/%s F\n", e_ptr->name);
                         tmp.symbol_type = F_Type;
                     }else if(strcmp(e_ptr->type, "string") == 0){
                         sprintf(input_tmp, "\tgetstatic compiler_hw3/%s Ljava/lang/String;\n", e_ptr->name);
-                        printf("\tgetstatic compiler_hw3/%s Ljava/lang/String;\n", e_ptr->name);
                         tmp.symbol_type = S_Type;
                     }else if(strcmp(e_ptr->type, "bool") == 0){
                         sprintf(input_tmp, "\tgetstatic compiler_hw3/%s I\n", e_ptr->name);
-                        printf("\tgetstatic compiler_hw3/%s I\n", e_ptr->name);
                         tmp.symbol_type = B_Type;
                     }else{
                         printf("the wrong e_ptr->type global\n");
@@ -1204,7 +1222,7 @@ Value lookup_id(Value v){
         ptr = ptr->pre;
     }
 
-    printf("Not Find ID -- undeclared variable !!!!\n");
+    printf("Not Find ID -- lookup_id !!!!\n");
     return tmp;
 
 }
@@ -1268,8 +1286,154 @@ Value lookup_id_istore(Value v){  // nothing to return, Void ???
         }
         ptr = ptr->pre;
     }
-
-    printf("Not Find ID -- undeclared variable !!!!\n");
+    printf("Not Find ID -- loojup_id_istore !!!!\n");
     return tmp;
+}
 
+
+Symbol_type lookup_id_return(Value v){
+    printf("in lookup_id_return\n");
+    struct Table *ptr = table_current;
+
+    while(ptr != NULL){
+        struct Entry *e_ptr = ptr->entry_header;
+        while(e_ptr != NULL){
+            if(strcmp(e_ptr->kind, "function") != 0 && strcmp(e_ptr->name, v.id_name) == 0){ //declared variable
+                //find id & gencode 
+                if(strcmp(e_ptr->type, "int") == 0){
+                    strcat(func_buf, "\tireturn\n");
+                    return I_Type;
+                }else if(strcmp(e_ptr->type, "float") == 0){
+                    strcat(func_buf, "\tfreturn\n");
+                    return F_Type;
+                }else if(strcmp(e_ptr->type, "bool") == 0){
+                    strcat(func_buf, "\treturn\n");
+                    return B_Type;
+                }else{
+                    printf("the wrong e_ptr->type loacl\n");
+                }
+            }
+            e_ptr = e_ptr->entry_next;
+        }
+        ptr = ptr->pre;
+    }
+
+    printf("Not Find ID -- lookup_id_return !!!!\n");
+    return T_Type;
+
+}
+
+Symbol_type lookup_id_type(Value v){
+    printf("in lookup_id_type\n");
+    struct Table *ptr = table_current;
+
+    while(ptr != NULL){
+        struct Entry *e_ptr = ptr->entry_header;
+        while(e_ptr != NULL){
+            if(strcmp(e_ptr->kind, "function") != 0 && strcmp(e_ptr->name, v.id_name) == 0){ //declared variable
+                //find id & gencode 
+                
+                if(strcmp(e_ptr->type, "int") == 0){
+                    return I_Type;
+                }else if(strcmp(e_ptr->type, "float") == 0){
+                    return F_Type;
+                }else if(strcmp(e_ptr->type, "bool") == 0){
+                    return B_Type;
+                }else if(strcmp(e_ptr->type, "string") == 0){
+                    return S_Type;
+                }else{
+                    printf("the wrong e_ptr->type local\n");
+                }
+            }
+            e_ptr = e_ptr->entry_next;
+        }
+        ptr = ptr->pre;
+    }
+
+    printf("Not Find ID -- lookup_id_type !!!!\n");
+    return T_Type;
+}
+
+//error detecting
+void input_checking(Value v){     //input parameter checking & gencode function call (invokestatic)
+    printf("in input_checking\n");
+    struct Entry *e_ptr = table_header->entry_header;
+
+    //cut attribute
+    char *delim = ", ";
+    char *token;
+    char str[50];
+    memset(str, 0, sizeof(str));
+
+    //creat function parameter array from symbol table
+    Symbol_type tmp[10];
+    int tmp_index = 0;
+
+    //gencode for attribute
+    char input_tmp[100];
+    char attrt_tmp[50];
+    memset(input_tmp, 0, sizeof(input_tmp));
+    memset(attrt_tmp, 0, sizeof(attrt_tmp));
+
+    while(e_ptr != NULL){
+        if(strcmp(e_ptr->kind, "function") == 0 && strcmp(e_ptr->name, v.id_name) == 0){ //declared variable
+            //find id & gencode 
+            //if different ->casting or error
+            strcat(str, e_ptr->attribute);
+            token = strtok(str, delim);
+            while (token != NULL)
+            {
+                if(strcmp(token, "int") == 0){
+                    tmp[tmp_index++] = I_Type;
+                    strcat(attrt_tmp, "I");
+                }else if(strcmp(token, "float") == 0){
+                    tmp[tmp_index++] = F_Type;
+                    strcat(attrt_tmp, "F");
+                }else if(strcmp(token, "string") == 0){
+                    tmp[tmp_index++] = S_Type;
+                    strcat(attrt_tmp, "S");
+                }else if(strcmp(token, "bool") == 0){
+                    tmp[tmp_index++] = B_Type;
+                    strcat(attrt_tmp, "I");
+                }else{
+                    printf("wrong !!!\n");
+                }
+
+                token = strtok (NULL, delim);
+            } 
+
+            //get function type 
+            if(strcmp(e_ptr->type, "int") == 0){
+                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)I\n", e_ptr->name, attrt_tmp);
+            }else if(strcmp(e_ptr->type, "float") == 0){
+                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)F\n", e_ptr->name, attrt_tmp);
+            }else if(strcmp(e_ptr->type, "void") == 0){
+                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)V\n", e_ptr->name, attrt_tmp);
+            }else if(strcmp(e_ptr->type, "bool") == 0){
+                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)I\n", e_ptr->name, attrt_tmp);
+            }else{
+                printf("wrong !!!\n");
+            }
+
+
+            strcat(func_buf, input_tmp);
+            break;
+        }
+        e_ptr = e_ptr->entry_next;
+    }
+
+    if(tmp_index != func_input_num){
+        printf("different index num %d, %d\n", tmp_index, func_input_num);
+        //yyerror
+    }
+
+    for(int i=0; i<tmp_index; i++){
+        if(func_input[i] != tmp[i]){
+            printf("different input type!!!\n");
+            //yyerror
+        }
+    }
+
+    func_input_num = 0;
+    return;
 }
