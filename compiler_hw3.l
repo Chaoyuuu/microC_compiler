@@ -94,8 +94,8 @@ id			  {letter}+({letter}|{digit})*
 "bool"      { /* ECHO; */ CONCAT; yylval.val.symbol_type = B_Type; return(BOOL);}
 
  /* boolean Keywords */
-"true"      { /* ECHO; */ CONCAT; yylval.val.s = strdup(yytext); return(TRUE); }
-"false"     { /* ECHO; */ CONCAT; yylval.val.s = strdup(yytext); return(FALSE); }
+"true"      { /* ECHO; */ CONCAT; yylval.val.i = 1; return(TRUE); }
+"false"     { /* ECHO; */ CONCAT; yylval.val.i = 0; return(FALSE); }
 
 "return"    { /* ECHO; */ CONCAT; return(RETURN); }
 
