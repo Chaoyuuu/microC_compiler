@@ -6,9 +6,9 @@
 	 else if (a > 40){
  	 	 print("a is larger than 40");
 	 }
-	 else{
-		 print(666);
-	 }
+	//  else{
+	// 	 print(666);
+	//  }
 
 	 return;
  }

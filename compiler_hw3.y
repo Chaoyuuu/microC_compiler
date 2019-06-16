@@ -48,10 +48,12 @@ extern int dump_flag;
 extern void yyerror(char *s);
 
 int func_flag = 0;
-char func_buf[500]; //buf for jasmin function
-char func_para[20]; //buf for function parameter
+char func_buf[500];         // buf for jasmin function
+char func_para[20];         // buf for function parameter
+char label_buf[500];        // buf for if-else {compond statement}
+int label_index = 0;        // index of if-else label
 int func_input_num = 0;     // index of func_input[]
-Symbol_type func_input[10]; //buf for function input parameter
+Symbol_type func_input[10]; // buf for function input parameter
 Symbol_type return_type;    // record function return type;
 Value trash_var;     // for trash value parameter
 FILE *file;         // To generate .j file for Jasmin
@@ -992,40 +994,68 @@ Value switch_assign_op(Value v1, Operator op, Value v2){
     return tmp;
 }
 
-Value switch_relation_op(Value v1, Operator op, Value v2){
+Value switch_relation_op(Value A, Operator op, Value B){
     printf("in switch_relation_op\n");
+    //no need to consider type casting && no counting, only need to return type
+    Value v1 = get_id_value(A);
+    Value v2 = get_id_value(B);
     Value tmp;
-    tmp.symbol_type = I_Type; // ??????B_Type
+    tmp.symbol_type = B_Type; 
 
+    char input_tmp[100];
+    memset(input_tmp, 0, sizeof(input_tmp));
+    /*Example: a > b
+        iload a           ---> get_id_value
+        iload b           ---> get_id_value
+        if_icmpgt label_1 ---> if_XXcmp & label
+        **FALSE           ---> store in label_buf
+        goto label_next
+        label_1:
+        **TRUE
+        label_next:
+        ...
+    */
     switch (op){
-        case MORE_OPT:
-            tmp.i = (v1.f > v2.f);
-            return tmp;
-        case LESS_OPT:
-            tmp.i = (v1.f < v2.f);
-            return tmp;
-        case GE_OPT:
-            tmp.i = (v1.f >= v2.f);
-            return tmp;
-        case LE_OPT:
-            tmp.i = (v1.f <= v2.f);
-            return tmp;
-        case EQ_OPT:
-            tmp.i = (v1.f == v2.f);
-            return tmp;
-        case NE_OPT:
-            tmp.i = (v1.f != v2.f);
-            return tmp;
+        case MORE_OPT: // >
+            sprintf(input_tmp, "\tif_icmpgt label_%d\n", label_index);
+            break;
+        case LESS_OPT: // <
+            sprintf(input_tmp, "\tif_icmplt label_%d\n", label_index);
+            break;
+        case GE_OPT: // >=
+            sprintf(input_tmp, "\tif_icmpge label_%d\n", label_index);
+            break;
+        case LE_OPT: // <=
+            sprintf(input_tmp, "\tif_icmple label_%d\n", label_index);
+            break;
+        case EQ_OPT: // ==
+            sprintf(input_tmp, "\tif_icmpeq label_%d\n", label_index);
+            break;
+        case NE_OPT: // !=
+            sprintf(input_tmp, "\tif_icmpne label_%d\n", label_index);
+            break;
         default:
             printf("wrong case in relation_op\n");
             break;
     }
+
+    strcat(func_buf, input_tmp);
+    memset(input_tmp, 0, sizeof(input_tmp));
+
+    int label_next = label_index + 1;
+    sprintf(input_tmp, "\tiload FALSE\n\tgoto label_%d\n\tlabel_%d:\n\tiload TRUE\n\tlabel_%d:\n"
+                     , label_next, label_index, label_next);
+    strcat(func_buf, input_tmp);
+
+    label_index = label_next + 1;
+    return tmp;
 }
 
 Value switch_logic_op(Value v1, Operator op, Value v2){
     printf("in switch_logic_op\n");
+    /* don't care !!!
     Value tmp;
-    tmp.symbol_type = I_Type; // ??????B_Type
+    tmp.symbol_type = I_Type; 
 
     switch (op){
         case AND_OPT:
@@ -1034,13 +1064,14 @@ Value switch_logic_op(Value v1, Operator op, Value v2){
         case OR_OPT:
             tmp.i = (v1.f || v2.f);
             return tmp;
-        case NOT_OPT: //??????????????????? !a
+        case NOT_OPT: 
             tmp.i = (v1.f >= v2.f);
             return tmp;
         default:
             printf("wrong case in logic_op\n");
             break;
     }
+    */
 }
 
 
