@@ -54,8 +54,8 @@ char func_buf[5000];         // buf for jasmin function
 char func_para[20];         // buf for function parameter
 char label_buf[500];        // buf for if-else {compond statement}
 int label_index = 0;        // index of if-else label
-int func_input_num = 0;     // index of func_input[]
-Value func_input[10]; // buf for function input parameter
+int func_input_num = 0;     // index of func_para_type[]
+Value func_para_type[10]; // buf for function input parameter
 Symbol_type return_type;    // record function return type;
 Value trash_var;     // for trash value parameter
 FILE *file;         // To generate .j file for Jasmin
@@ -89,7 +89,7 @@ Value minus_arith(Value v1, Value v2);
 
 //error detecting && tool
 Symbol_type lookup_id_return();
-Value lookup_id_type();
+// Value lookup_id_type();
 void input_checking();
 
 //code generation function
@@ -97,6 +97,7 @@ Value gencode_global_1();
 Value gencode_global_2();
 Value gencode_local_1();
 Value gencode_local_2();
+Value gencode_parameter();
 void gencode_func();
 void gencode_print();
 void gencode_return();
@@ -326,18 +327,20 @@ declarator2
 ;
 
 identifier_list2
-    : identifier_list2 ',' expression   { if($3.symbol_type == ID_Type)
-                                            func_input[func_input_num++] = lookup_id_type($3); 
-                                          else
-                                            func_input[func_input_num++] = $3; 
+    : identifier_list2 ',' expression   { if($3.symbol_type == ID_Type){
+                                            func_para_type[func_input_num++] = get_id_entry($3);
+                                            // func_para_type[func_input_num++] = lookup_id_type($3); 
+                                        }else
+                                            func_para_type[func_input_num++] = $3; 
 
                                          //load variable
                                          // get_id_value($3, 0);
                                         }
-    | expression    { if($1.symbol_type == ID_Type)
-                        func_input[func_input_num++] = lookup_id_type($1); 
-                      else
-                        func_input[func_input_num++] = $1; 
+    | expression    { if($1.symbol_type == ID_Type){
+                        func_para_type[func_input_num++] = get_id_entry($1);
+                         // func_para_type[func_input_num++] = lookup_id_type($1); 
+                    }else
+                        func_para_type[func_input_num++] = $1; 
 
                       //load variable
                       //get_id_value($1, 0);
@@ -510,20 +513,26 @@ void insert_symbol(Value _type, Value _ID, char* k, Value _expr) {
     if(strcmp(k, "function") == 0){
         get_attribute(e_ptr);
         gencode_func(_type, _ID);
-    }else{      
+    }else if(strcmp(k, "variable") == 0){      
         //paremeter and variable, generate to jasim & set e_ptr->entry_val
         if(table_current->table_depth == 0){
             if(_expr.symbol_type != T_Type)       //int a = 3;
-                e_ptr->entry_val =  gencode_global_1(_type, _ID, _expr, e_ptr->entry_val);
+                e_ptr->entry_val = gencode_global_1(_type, _ID, _expr, e_ptr->entry_val);
             else                                //int a;
-                e_ptr->entry_val =  gencode_global_2(_type, _ID, e_ptr->entry_val);
+                e_ptr->entry_val = gencode_global_2(_type, _ID, e_ptr->entry_val);
         }else{
             if(_expr.symbol_type != T_Type)        //int a = 3;
-                e_ptr->entry_val =  gencode_local_1(_type, _ID, _expr, e_ptr->index, e_ptr->entry_val);
+                e_ptr->entry_val = gencode_local_1(_type, _ID, _expr, e_ptr->index, e_ptr->entry_val);
             else                                //int a;
-                e_ptr->entry_val =  gencode_local_2(_type, _ID, e_ptr->index, e_ptr->entry_val);
+                e_ptr->entry_val = gencode_local_2(_type, _ID, e_ptr->index, e_ptr->entry_val);
         }
+    }else if(strcmp(k, "parameter") == 0){      
+        //paremeter, generate to jasim & set e_ptr->entry_val
+        e_ptr->entry_val = gencode_parameter(_type, _ID, e_ptr->index);
+    }else{
+        printf("error in -- insert_symbol\n");
     }
+
     printf("%s, %d\n", e_ptr->entry_val.id_name, e_ptr->entry_val.id_symbol_type);
  
     printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
@@ -835,6 +844,19 @@ Value gencode_local_2(Value _type, Value _id, int index, Value vval){
     }
 
     strcat(func_buf, input_tmp);
+    return _val;
+}
+
+Value gencode_parameter(Value _type, Value _id, int index){
+    printf("in gencode_parameter\n");
+
+    Value _val;
+    _val.id_name = _id.id_name;
+    _val.id_symbol_type = _type.symbol_type;
+    _val.is_global = 0;
+    _val.id_index = index;
+
+
     return _val;
 }
 
@@ -1507,6 +1529,7 @@ Symbol_type lookup_id_return(Value v){
 
 }
 
+/*
 Value lookup_id_type(Value v){
     printf("in lookup_id_type\n");
     struct Table *ptr = table_current;
@@ -1541,6 +1564,7 @@ Value lookup_id_type(Value v){
     printf("Not Find ID -- lookup_id_type !!!!\n");
     return tmp;
 }
+*/
 
 //error detecting
 void input_checking(Value v){     //input parameter checking & gencode function call (invokestatic)
@@ -1558,31 +1582,30 @@ void input_checking(Value v){     //input parameter checking & gencode function 
     int tmp_index = 0;
 
     //gencode for attribute
-    char input_tmp[100];
-    char attrt_tmp[50];
+    char input_tmp[200];
+    char para_tmp[50];
     memset(input_tmp, 0, sizeof(input_tmp));
-    memset(attrt_tmp, 0, sizeof(attrt_tmp));
+    memset(para_tmp, 0, sizeof(para_tmp));
 
     while(e_ptr != NULL){
         if(strcmp(e_ptr->kind, "function") == 0 && strcmp(e_ptr->name, v.id_name) == 0){ //declared variable
-            //find id & gencode 
-            //if different ->casting or error
+            //find attribute & cut token to make tmp[]
             strcat(str, e_ptr->attribute);
             token = strtok(str, delim);
             while (token != NULL)
             {
                 if(strcmp(token, "int") == 0){
                     tmp[tmp_index++] = I_Type;
-                    strcat(attrt_tmp, "I");
+                    strcat(para_tmp, "I");
                 }else if(strcmp(token, "float") == 0){
                     tmp[tmp_index++] = F_Type;
-                    strcat(attrt_tmp, "F");
+                    strcat(para_tmp, "F");
                 }else if(strcmp(token, "string") == 0){
                     tmp[tmp_index++] = S_Type;
-                    strcat(attrt_tmp, "");
+                    strcat(para_tmp, "Ljava/lang/String;");
                 }else if(strcmp(token, "bool") == 0){
                     tmp[tmp_index++] = B_Type;
-                    strcat(attrt_tmp, "I");
+                    strcat(para_tmp, "I");
                 }else{
                     printf("wrong !!!\n");
                 }
@@ -1590,38 +1613,57 @@ void input_checking(Value v){     //input parameter checking & gencode function 
                 token = strtok (NULL, delim);
             } 
 
-            //get function type 
+            //get function type & gencode
             if(strcmp(e_ptr->type, "int") == 0){
-                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)I\n", e_ptr->name, attrt_tmp);
+                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)I\n", e_ptr->name, para_tmp);
             }else if(strcmp(e_ptr->type, "float") == 0){
-                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)F\n", e_ptr->name, attrt_tmp);
+                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)F\n", e_ptr->name, para_tmp);
             }else if(strcmp(e_ptr->type, "void") == 0){
-                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)V\n", e_ptr->name, attrt_tmp);
+                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)V\n", e_ptr->name, para_tmp);
             }else if(strcmp(e_ptr->type, "bool") == 0){
-                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)I\n", e_ptr->name, attrt_tmp);
+                sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)I\n", e_ptr->name, para_tmp);
             }else{
                 printf("wrong !!!\n");
             }
 
-
-            strcat(func_buf, input_tmp);
+           
             break;
         }
         e_ptr = e_ptr->entry_next;
     }
 
+    //is same parameter number ?
     if(tmp_index != func_input_num){
         printf("different index num %d, %d\n", tmp_index, func_input_num);
         //yyerror
     }
 
+    //type casting
+    Symbol_type _type;
     for(int i=0; i<tmp_index; i++){
-        if(func_input[i].symbol_type != tmp[i]){
+        if(func_para_type[i].symbol_type == ID_Type){
+            _type = func_para_type[i].id_symbol_type;
+        }else{
+            _type = func_para_type[i].symbol_type;
+        }
+
+        //gencode
+        gencode_iload(func_para_type[i]);
+
+        //casting & gencode
+        if(_type != tmp[i]){  
             printf("different input type!!!\n");
-            //yyerror
+            if(_type == I_Type && tmp[i] == F_Type){
+                fprintf(file, "%s", "\ti2f\n");
+            }else if(_type == F_Type && tmp[i] == T_Type){
+                fprintf(file, "%s", "\tf2i\n");
+            }else{
+                printf("wrong in -- input_type_checking\n");
+            }
         }
     }
 
+    strcat(func_buf, input_tmp);
     func_input_num = 0;
     return;
 }
