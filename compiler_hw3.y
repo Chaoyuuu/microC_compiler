@@ -78,6 +78,7 @@ Value switch_assign_op();
 Value switch_relation_op();
 Value switch_logic_op();
 Value get_id_value();
+Value get_id_entry();
 
 //arithmetic
 Value mul_arith(Value v1, Value v2);
@@ -94,10 +95,10 @@ Value lookup_id_type();
 void input_checking();
 
 //code generation function
-void gencode_global_1();
-void gencode_global_2();
-void gencode_local_1();
-void gencode_local_2();
+Value gencode_global_1();
+Value gencode_global_2();
+Value gencode_local_1();
+Value gencode_local_2();
 void gencode_func();
 void gencode_print();
 void gencode_return();
@@ -181,9 +182,9 @@ compound_stat
 ;
 
 expression_stat
-    : selection_statement { printf("&&&&&&&& is select\n");}
+    : selection_statement { /* printf("&&&&&&&& is select\n"); */}
     | while_statement 
-    | expression SEMICOLON { printf("&&&&&&&&is expression\n");}
+    | expression SEMICOLON { /* printf("&&&&&&&&is expression\n"); */}
     | return_statement 
 ;
 
@@ -513,17 +514,18 @@ void insert_symbol(Value _type, Value _ID, char* k, Value _expr) {
     }else{      
         //paremeter and variable, generate to jasim & set e_ptr->entry_val
         if(table_current->table_depth == 0){
-            if(_expr.symbol_type != T_Type)        //int a = 3;
-                gencode_global_1(_type, _ID, _expr, e_ptr->entry_val);
+            if(_expr.symbol_type != T_Type)       //int a = 3;
+                e_ptr->entry_val =  gencode_global_1(_type, _ID, _expr, e_ptr->entry_val);
             else                                //int a;
-                gencode_global_2(_type, _ID, e_ptr->entry_val);
+                e_ptr->entry_val =  gencode_global_2(_type, _ID, e_ptr->entry_val);
         }else{
             if(_expr.symbol_type != T_Type)        //int a = 3;
-                gencode_local_1(_type, _ID, _expr, e_ptr->index, e_ptr->entry_val);
+                e_ptr->entry_val =  gencode_local_1(_type, _ID, _expr, e_ptr->index, e_ptr->entry_val);
             else                                //int a;
-                gencode_local_2(_type, _ID, e_ptr->index, e_ptr->entry_val);
+                e_ptr->entry_val =  gencode_local_2(_type, _ID, e_ptr->index, e_ptr->entry_val);
         }
     }
+    printf("%s, %d\n", e_ptr->entry_val.id_name, e_ptr->entry_val.id_symbol_type);
  
     printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
 }
@@ -678,11 +680,12 @@ void dump_symbol() {
 }
 
 //code generation function
-void gencode_global_1(Value _type, Value _id, Value _expr, Value _val){
+Value gencode_global_1(Value _type, Value _id, Value _expr, Value vval){
     printf("in gencode_1\n");
     // printf(".field public static");
     fprintf(file, ".field public static");
 
+    Value _val;
     _val.id_name = _id.id_name;
     _val.id_symbol_type = _type.symbol_type;
     _val.is_global = 1;
@@ -714,14 +717,15 @@ void gencode_global_1(Value _type, Value _id, Value _expr, Value _val){
 
     fprintf(file, "%s", input_tmp);
     // printf("%s, _id = %s, %d\n", input_tmp, _val.id_name, _val.id_symbol_type);
-
+    return _val;
 }
 
-void gencode_global_2(Value _type, Value _id, Value _val){
+Value gencode_global_2(Value _type, Value _id, Value vval){
     printf("in gencode_2\n");
     // printf(".field public static");
     fprintf(file, ".field public static");
 
+    Value _val;
     _val.id_name = _id.id_name;
     _val.id_symbol_type = _type.symbol_type;
     _val.is_global = 1;
@@ -753,11 +757,13 @@ void gencode_global_2(Value _type, Value _id, Value _val){
 
     fprintf(file, "%s", input_tmp);
     // printf("%s, _id = %s, %d\n", input_tmp, _val.id_name, _val.id_symbol_type);
+    return _val;
 }
 
-void gencode_local_1(Value _type, Value _id, Value _expr, int index, Value _val){
+Value gencode_local_1(Value _type, Value _id, Value _expr, int index, Value vval){
     printf("in gencode_local_1\n");
 
+    Value _val;
     _val.id_name = _id.id_name;
     _val.id_symbol_type = _type.symbol_type;
     _val.is_global = 0;
@@ -792,12 +798,13 @@ void gencode_local_1(Value _type, Value _id, Value _expr, int index, Value _val)
     }
 
     strcat(func_buf, input_tmp);
-    return;
+    return _val;
 }
 
-void gencode_local_2(Value _type, Value _id, int index, Value _val){
+Value gencode_local_2(Value _type, Value _id, int index, Value vval){
     printf("in gencode_local_2\n");
 
+    Value _val;
     _val.id_name = _id.id_name;
     _val.id_symbol_type = _type.symbol_type;
     _val.is_global = 0;
@@ -829,7 +836,7 @@ void gencode_local_2(Value _type, Value _id, int index, Value _val){
     }
 
     strcat(func_buf, input_tmp);
-    return;
+    return _val;
 }
 
 void gencode_func(Value _type, Value _id){
@@ -926,13 +933,14 @@ void gencode_print(Value v){ // only print int, float, string variables and cons
     //2. put something on TOS
     //3. invokevirtural
     Value tmp;
-    if(v.symbol_type == ID_Type)
-        // tmp = lookup_id(v);
-        //print jasmin
-        printf("same\n");
-    else
+    if(v.symbol_type == ID_Type){
+        tmp = get_id_value(v);
+        v = get_id_entry(v);
+    }else{
         tmp.symbol_type = v.symbol_type;
+    }
 
+    gencode_iload(v);
     strcat(func_buf, "\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n\tswap\n");
 
     switch(tmp.symbol_type){
@@ -1112,6 +1120,9 @@ Value mul_arith(Value A, Value B){
     
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
+    A = get_id_entry(A);
+    B = get_id_entry(B);
+    
     Value v_tmp;
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){       //II
@@ -1150,6 +1161,9 @@ Value div_arith(Value A, Value B){
     
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
+    A = get_id_entry(A);
+    B = get_id_entry(B);
+
     Value v_tmp;
 
     //cannot divide by zero
@@ -1196,6 +1210,9 @@ Value mod_arith(Value A, Value B){
 
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
+    A = get_id_entry(A);
+    B = get_id_entry(B);
+
     Value v_tmp;
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){       //II
@@ -1213,9 +1230,15 @@ Value mod_arith(Value A, Value B){
 
 Value add_arith(Value A, Value B){
     printf("in add_arith\n");
+    // printf("%d, %d, %s,,,%d\n", A.symbol_type, A.id_symbol_type, A.id_name, B.symbol_type);
     
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
+    A = get_id_entry(A);
+    B = get_id_entry(B);
+
+    // printf("%d, %d, %s,,,%d\n", A.symbol_type, A.id_symbol_type, A.id_name, B.symbol_type);
+
     Value v_tmp;
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){       //II
@@ -1254,6 +1277,9 @@ Value minus_arith(Value A, Value B){
     
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
+    A = get_id_entry(A);
+    B = get_id_entry(B);
+
     Value v_tmp;
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){       //II
@@ -1323,15 +1349,41 @@ Value get_id_value(Value v, int flag){
         }
         ptr = ptr->pre;
     }
-    printf("Not Find ID -- get_ud_value !!!!\n");
+    printf("Not Find ID -- get_id_value !!!!\n");
     return _val;
+}
+
+Value get_id_entry(Value v){
+
+    if(v.symbol_type != ID_Type)
+        return v;
+
+    struct Table *ptr = table_current;
+    Value _val;
+    while(ptr != NULL){
+        struct Entry *e_ptr = ptr->entry_header;
+        while(e_ptr != NULL){
+            if(strcmp(e_ptr->kind, "function") != 0 && strcmp(e_ptr->name, v.id_name) == 0){ 
+                //declared variable && find id & gencode 
+                _val = e_ptr->entry_val;
+                _val.symbol_type = ID_Type;
+                return _val;    
+            }
+            e_ptr = e_ptr->entry_next;
+        }
+        ptr = ptr->pre;
+    }
+    printf("Not Find ID -- get_id_entry !!!!\n");
+    return v;
 }
 
 void gencode_iload(Value v){
     char input_tmp[100];
     memset(input_tmp, 0 ,sizeof(input_tmp));
+    printf("----type %d\n", v.symbol_type);
 
     if(v.symbol_type == ID_Type){
+        printf(" ==== type %d\n", v.id_symbol_type);
         if(v.is_global == 1){
             switch(v.id_symbol_type){
                 case I_Type:
@@ -1366,7 +1418,7 @@ void gencode_iload(Value v){
             }
         }
     }else{  // the const
-        switch(v.id_symbol_type){
+        switch(v.symbol_type){
             case I_Type:
             case B_Type:
                 sprintf(input_tmp, "\tldc %d\n", v.i);

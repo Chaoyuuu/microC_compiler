@@ -16,22 +16,22 @@ struct Value
         int i;
         float f;
         char *s;
-        struct {
-            char * id_name;
-            union 
-            {
-                int id_i;
-                float id_f;
-                char *id_s;
-            };
-            Symbol_type id_symbol_type;
-            int is_global;
-            int id_index;
-            // struct Value *val_ptr;
-        };
+        
     };
     Symbol_type symbol_type;
-    
+
+    // for ID
+    char * id_name;
+    union 
+    {
+        int id_i;
+        float id_f;
+        char *id_s;
+    };
+    Symbol_type id_symbol_type;
+    int is_global;
+    int id_index;
+
 };
 
 #endif
