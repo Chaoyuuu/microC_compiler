@@ -18,10 +18,18 @@ struct Value
         char *s;
         struct {
             char * id_name;
-            struct Value *val_ptr;
+            union 
+            {
+                int id_i;
+                float id_f;
+                char *id_s;
+            };
+            Symbol_type id_symbol_type;
+            int is_global;
+            int id_index;
+            // struct Value *val_ptr;
         };
     };
-
     Symbol_type symbol_type;
     
 };
