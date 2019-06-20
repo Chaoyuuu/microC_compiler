@@ -41,6 +41,7 @@ struct Func{
     Symbol_type f_type;
     struct Func * f_pre;
     int f_count;
+    char f_attr[50];
 };
 
 struct Func * f_header = NULL;
@@ -62,7 +63,8 @@ int func_flag = 0;
 
 // int cast_flag = 0;          // flag for arith casting
 char func_buf[5000];         // buf for jasmin function
-char func_para[20];         // buf for function parameter
+char func_para[50];         // buf for function parameter
+char func_para_2[50];
 char label_buf[500];        // buf for if-else {compond statement}
 int label_index = 0;        // index of if-else label
 int func_input_num = 0;     // index of func_para_type[]
@@ -101,6 +103,7 @@ Value minus_arith(Value v1, Value v2);
 Value gencode_funcall();  //function checking and return is_arith & type
 int func_return_checking();
 void create_func_table();
+void set_func_para();
 
 //code generation function
 Value gencode_global_1();
@@ -295,6 +298,7 @@ function_declaration
                                               insert_symbol($1, $2, type_f, trash_var);
                                           }
                                           gencode_func($1, $2);
+
                                         }
     | type ID declarator SEMICOLON  { dump_table();                             //define
                                       // lookup_function($2.id_name, 2); 
@@ -314,10 +318,10 @@ declarator
 ;
 
 identifier_list
-    : identifier_list ',' type ID 
-        { insert_symbol($3, $4, type_p, trash_var); }
+    : identifier_list ',' type ID  { insert_symbol($3, $4, type_p, trash_var); 
+                                     set_func_para($3, 1);}
     | type ID
-        { insert_symbol($1, $2, type_p, trash_var); }
+        { insert_symbol($1, $2, type_p, trash_var); set_func_para($1, 0);}
 ;
 
 declarator2
@@ -532,9 +536,11 @@ void create_func_table(Value _type, Value _id){
     printf("hooo\n");
     struct Func * f_ptr = malloc(sizeof(struct Func));
     memset(f_ptr->f_name, 0, sizeof(f_ptr->f_name));
+    memset(f_ptr->f_attr, 0, sizeof(f_ptr->f_attr));
 
     //set value
     strcat(f_ptr->f_name, _id.id_name);   
+    strcat(f_ptr->f_attr, func_para);
     f_ptr->f_type = _type.symbol_type;
     f_ptr->f_pre = f_current;
     f_ptr->f_count = 0;
@@ -554,16 +560,35 @@ int func_return_checking(Value _type, Value _id, int flag){
 
     struct Func * f_ptr = f_current;
     while(f_ptr != NULL){
-        printf("hiii\n");
+        // printf("hiii, %s, %s\n", f_ptr->f_name, _id.id_name);
         if(strcmp(f_ptr->f_name, _id.id_name) == 0){
+            // printf("hiii222\n");
             if(_type.symbol_type != f_ptr->f_type ){
+                if(strcmp(f_ptr->f_attr, func_para_2) != 0){
+                    printf("different return type\n");
+                    //yyerror
+                    memset(error_msg, 0, sizeof(error_msg));
+                    strcat(error_msg, "1. function return type is not the same\n");
+                    strcat(error_msg, "| 2. function formal patameter is not the same");
+                    error_flag = 1;
+                }else{
+                    //yyerror
+                    memset(error_msg, 0, sizeof(error_msg));
+                    strcat(error_msg, "function return type is not the same");
+                    error_flag = 1;
+                }
+
+                return 1;   //find & different return type
+            }
+
+            printf("%s, %s = %s\n", f_ptr->f_name, f_ptr->f_attr, func_para_2);
+
+            if(strcmp(f_ptr->f_attr, func_para_2) != 0){
                 printf("different return type\n");
                 //yyerror
                 memset(error_msg, 0, sizeof(error_msg));
-                strcat(error_msg, "function return type is not the same");
+                strcat(error_msg, "function formal patameter is not the same");
                 error_flag = 1;
-
-                return 1;   //find & different return type
             }
 
             if(f_ptr->f_count == flag){
@@ -719,6 +744,31 @@ void lookup_function(char *name, int flag){
     }
 
 }
+
+void set_func_para(Value _type, int flag){
+    if(flag == 0){ // init
+        memset(func_para_2, 0, sizeof(func_para_2));
+    }
+
+    switch(_type.symbol_type){
+        case I_Type:
+            strcat(func_para_2, "I");
+            break;
+        case B_Type:
+            strcat(func_para_2, "I");
+            break;
+        case F_Type:
+            strcat(func_para_2, "F");
+            break;
+        case S_Type:
+            strcat(func_para_2, "Ljava/lang/String;");
+            break;
+        default:
+            printf(" in set_func_para\n");
+            break;
+    }
+}
+
 void dump_table(){
     // printf("\n----in dump_table, depth = %d, current = %p----\n", table_current->table_depth, table_current);
     table_dump = table_current;

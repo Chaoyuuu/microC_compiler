@@ -2,7 +2,7 @@ int a = 100;
 int b = 20;
 
 
-
+int foo(int a, int b);
 
 int foo(int a, int b){
     int c = a +b;
@@ -11,8 +11,8 @@ int foo(int a, int b){
     return a;
 }
 
-int foo(int a, int b);
-int foo(int a, int b);
+
+
 
 
 void main() {
