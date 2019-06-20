@@ -7,9 +7,11 @@ float foo(float a, float b){
 
 void main() {
 
-    bool c = true;
-    bool f = false;
-    bool g;
+    int b = 5;
+    int a = 1+ b*5;
+    int c = 252 / 2;
+    float d = a / b;
+    float e = 10.4 / 1.1;
     // float a;
     // float b = 1.67;
     // float c = 2;
@@ -19,9 +21,9 @@ void main() {
 print(a);
 print(b);
 print(c);
-// print(d);
-// print(e);
-print(f);
+print(d);
+print(e);
+// print(f);
     // float x =  a*1+2.5*(8+7)/3;
     // print(x);
     // print("Srting");

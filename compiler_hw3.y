@@ -1080,9 +1080,7 @@ Value switch_mul_op(Value v1, Operator op, Value v2){
         case DIV_OPT:
             return div_arith(v1, v2);
         case MOD_OPT:
-            // return mod_arirh(v1, v2);
-            printf("in MOD_arith\n");
-            break;
+            return mod_arith(v1, v2);
         default:
             printf("wrong case in mul_arith\n");
             break;
@@ -1349,7 +1347,8 @@ Value mod_arith(Value A, Value B){
     }
 
     v_tmp.is_arith = 1;
-    return v_tmp;
+    
+    return A;
 }
 
 Value add_arith(Value A, Value B){
