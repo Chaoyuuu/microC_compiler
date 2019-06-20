@@ -72,6 +72,8 @@ Value func_para_type[10]; // buf for function input parameter
 Value trash_var;     // for trash value parameter
 FILE *file;         // To generate .j file for Jasmin
 
+char while_buf[5000];
+
 
 /* Symbol table function - you can add new function if needed. */
 void get_attribute(struct Entry * tmp);
@@ -117,6 +119,7 @@ void gencode_return();
 void gencode_iload();
 void gencode_istore();
 void gencode_if_arith();
+void gencode_while();
 
 %}
 
@@ -194,7 +197,7 @@ compound_stat
 expression_stat
     : selection_statement { /* printf("&&&&&&&& is select\n"); */}
     | while_statement 
-    | expression SEMICOLON { /* printf("&&&&&&&&is expression\n"); */}
+    | expression SEMICOLON { /* printf("&&&&&&&&is  expression\n"); */}
     | return_statement 
 ;
 
@@ -212,7 +215,15 @@ selection_statement
 while_statement
     : WHILE                                 
       { create_symbol(); }
-     '(' expression ')' compound_stat 
+     '(' expression ')'     { gencode_while($4); } 
+      compound_stat         { char ttmp[50]; 
+                              memset(ttmp, 0, sizeof(ttmp));
+                              sprintf(ttmp, "\tgoto label_%d\n",label_index - 2 );
+                              strcat(func_buf, ttmp);
+                              memset(ttmp, 0, sizeof(ttmp));
+                              sprintf(ttmp, "label_%d:\n",label_index );
+                              strcat(func_buf, ttmp);
+                            }
 ;
 
 
@@ -1246,14 +1257,22 @@ Value switch_postfix_op(Value v1, Operator op){
     tmp.i = 1;
 
     switch (op){
-        case INC_OPT:
-            return add_arith(v1, tmp);
+        case INC_OPT: // a = a + 1;
+            tmp =  add_arith(v1, tmp);
+            break;
+
         case DEC_OPT:
-            return minus_arith(v1, tmp);
+            tmp =  minus_arith(v1, tmp);
+            break;
         default:
             printf("wrong case in postfix_op\n");
             break;
     }
+
+    v1 = get_id_entry(v1);
+    gencode_istore(v1);
+
+    return tmp;
 }
 
 Value switch_assign_op(Value v1, Operator op, Value v2){
@@ -1334,38 +1353,53 @@ Value switch_relation_op(Value A, Operator op, Value B){
         ...
     */
 
-    if(A.is_arith == 0){
-        A = get_id_entry(A);
-        gencode_iload(A);
-    }else if(B.is_arith == 0){
-        B = get_id_entry(B);
-        gencode_iload(B);
-    }
-    
     Value tmp;
     tmp.symbol_type = B_Type; 
 
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
+
+    //????????????
+    memset(while_buf, 0, sizeof(while_buf));
+
+    sprintf(input_tmp, "label_%d:\n", ++label_index);
+    strcat(func_buf, input_tmp);
+    memset(input_tmp, 0, sizeof(input_tmp));
+
+    
+    if(A.is_arith == 0 && B.is_arith == 0){
+        A = get_id_entry(A);
+        gencode_iload(A);
+        B = get_id_entry(B);
+        gencode_iload(B);
+    }else if(A.is_arith == 1 && B.is_arith == 0){
+        B = get_id_entry(B);
+        gencode_iload(B);
+    }else if(A.is_arith == 0 && B.is_arith == 1){
+        A = get_id_entry(A);
+        gencode_iload(A);
+    }
+    
+    
    
     switch (op){
         case MORE_OPT: // >
-            sprintf(input_tmp, "\tif_icmpgt label_%d\n", label_index);
+            sprintf(input_tmp, "\tif_icmpgt label_%d\n", ++label_index);
             break;
         case LESS_OPT: // <
-            sprintf(input_tmp, "\tif_icmplt label_%d\n", label_index);
+            sprintf(input_tmp, "\tif_icmplt label_%d\n", ++label_index);
             break;
         case GE_OPT: // >=
-            sprintf(input_tmp, "\tif_icmpge label_%d\n", label_index);
+            sprintf(input_tmp, "\tif_icmpge label_%d\n", ++label_index);
             break;
         case LE_OPT: // <=
-            sprintf(input_tmp, "\tif_icmple label_%d\n", label_index);
+            sprintf(input_tmp, "\tif_icmple label_%d\n", ++label_index);
             break;
         case EQ_OPT: // ==
-            sprintf(input_tmp, "\tif_icmpeq label_%d\n", label_index);
+            sprintf(input_tmp, "\tif_icmpeq label_%d\n", ++label_index);
             break;
         case NE_OPT: // !=
-            sprintf(input_tmp, "\tif_icmpne label_%d\n", label_index);
+            sprintf(input_tmp, "\tif_icmpne label_%d\n", ++label_index);
             break;
         default:
             printf("wrong case in relation_op\n");
@@ -1375,12 +1409,19 @@ Value switch_relation_op(Value A, Operator op, Value B){
     strcat(func_buf, input_tmp);
     memset(input_tmp, 0, sizeof(input_tmp));
 
-    int label_next = label_index + 1;
-    sprintf(input_tmp, "\tiload FALSE\n\tgoto label_%d\n\tlabel_%d:\n\tiload TRUE\n\tlabel_%d:\n"
-                     , label_next, label_index, label_next);
+    // int label_next = label_index + 1;
+
+    //for while
+    sprintf(input_tmp, "\tgoto label_%d\n", ++label_index);
     strcat(func_buf, input_tmp);
 
-    label_index = label_next + 1;
+
+    // sprintf(input_tmp, "\tiload FALSE\n\tgoto label_%d\n\tlabel_%d:\n\tiload TRUE\n\tlabel_%d:\n"
+                    //  , label_next, label_index, label_next);
+    
+    // strcat(func_buf, input_tmp);
+
+    // label_index = label_next + 1;
     return tmp;
 }
 
@@ -1927,4 +1968,21 @@ Value gencode_funcall(Value _val){
     func_input_num = 0;
     v.is_arith = 1;
     return v;
+}
+
+void gencode_while(Value v){
+    printf("in gencode_while\n");
+
+    char input_tmp[200];
+    memset(input_tmp, 0, sizeof(input_tmp));
+
+    printf("the index_num = %d\n", label_index);
+
+    sprintf(input_tmp, "label_%d:\n", label_index -1);
+    strcat(func_buf, input_tmp);
+
+
+
+
+
 }

@@ -1,8 +1,8 @@
 void main(){
-    int a = 1;
-    while (a < 6){
+    int a = 6;
+    while (a > 1){
         print(a);
-        a++;
+        a--;
     }
     return;
 }
