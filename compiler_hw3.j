@@ -6,10 +6,10 @@
 .limit stack 50
 .limit locals 50
 	iload 0
-	iload 1
+	getstatic compiler_hw3/b I
 	iadd
-	istore 2
-	iload 2
+	istore 1
+	iload 1
 	getstatic java/lang/System/out Ljava/io/PrintStream;
 	swap
 	invokevirtual java/io/PrintStream/println(I)V

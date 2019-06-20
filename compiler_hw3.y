@@ -292,17 +292,25 @@ return_statement
 ;
 
 function_declaration
-    : type ID declarator compound_stat  { // lookup_function($2.id_name, 3);      //declare
-                                          int a = func_return_checking($1, $2, 0); 
+    : type ID declarator { func_return_checking($1, $2, 0); }
+      compound_stat                     { // lookup_function($2.id_name, 3);      //declare
+
+                                          int a = 1;
+                                          if(error_flag != 1)
+                                              a = func_return_checking($1, $2, 0); 
                                           if(a == 0){
                                               insert_symbol($1, $2, type_f, trash_var);
                                           }
                                           gencode_func($1, $2);
 
                                         }
-    | type ID declarator SEMICOLON  { dump_table();                             //define
+    | type ID declarator { func_return_checking($1, $2, 0); } 
+    SEMICOLON                       { dump_table();                             //define
                                       // lookup_function($2.id_name, 2); 
-                                      int a = func_return_checking($1, $2, 1);
+                                    //   int a = func_return_checking($1, $2, 1);
+                                      int a = 1;
+                                      if(error_flag != 1)
+                                            a = func_return_checking($1, $2, 0); 
                                       if(error_flag != 1 && a == 0){
                                             insert_symbol($1, $2, type_f, trash_var);
                                       }
