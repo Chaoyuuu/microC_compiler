@@ -36,18 +36,30 @@ struct Table *table_header = NULL;
 struct Table *table_current = NULL;
 struct Table *table_dump = NULL;
 
+struct Func{
+    char f_name[50];
+    Symbol_type f_type;
+    struct Func * f_pre;
+    int f_count;
+};
+
+struct Func * f_header = NULL;
+struct Func * f_current = NULL;
+
 extern int yylineno;
 extern int yylex();
 extern char* yytext;   // Get current token from lex
-extern char buf[256];  // Get current code line from lex
-extern char syntax_buf[256];
+extern char buf[500];  // Get current code line from lex
+extern char syntax_buf[500];
 extern int error_flag; //1.redefined 2.undefined
 extern int syntax_flag;
-extern char error_msg[256];
+extern char error_msg[500];
 extern int dump_flag;
 extern void yyerror(char *s);
 
 int func_flag = 0;
+
+
 // int cast_flag = 0;          // flag for arith casting
 char func_buf[5000];         // buf for jasmin function
 char func_para[20];         // buf for function parameter
@@ -55,7 +67,6 @@ char label_buf[500];        // buf for if-else {compond statement}
 int label_index = 0;        // index of if-else label
 int func_input_num = 0;     // index of func_para_type[]
 Value func_para_type[10]; // buf for function input parameter
-Symbol_type return_type;    // record function return type;
 Value trash_var;     // for trash value parameter
 FILE *file;         // To generate .j file for Jasmin
 
@@ -68,6 +79,7 @@ void lookup_function();
 void insert_symbol();
 void dump_symbol();
 void dump_table();
+
 
 /* expression function */
 Value switch_mul_op();
@@ -87,6 +99,8 @@ Value minus_arith(Value v1, Value v2);
 
 //error detecting && tool
 Value gencode_funcall();  //function checking and return is_arith & type
+int func_return_checking();
+void create_func_table();
 
 //code generation function
 Value gencode_global_1();
@@ -275,17 +289,20 @@ return_statement
 ;
 
 function_declaration
-    : type ID declarator compound_stat  { lookup_function($2.id_name, 3); 
-                                          if(func_flag != 1){
+    : type ID declarator compound_stat  { // lookup_function($2.id_name, 3);      //declare
+                                          int a = func_return_checking($1, $2, 0); 
+                                          if(a == 0){
                                               insert_symbol($1, $2, type_f, trash_var);
                                           }
-                                          func_flag = 0;
+                                          gencode_func($1, $2);
                                         }
-    | type ID declarator SEMICOLON  { dump_table(); 
-                                      lookup_function($2.id_name, 2); 
-                                      if(error_flag != 1){
-                                        insert_symbol($1, $2, type_f, trash_var);
+    | type ID declarator SEMICOLON  { dump_table();                             //define
+                                      // lookup_function($2.id_name, 2); 
+                                      int a = func_return_checking($1, $2, 1);
+                                      if(error_flag != 1 && a == 0){
+                                            insert_symbol($1, $2, type_f, trash_var);
                                       }
+                                      f_current->f_count = 1;
                                     }
 ;
 
@@ -363,8 +380,6 @@ int main(int argc, char** argv)
 
     create_symbol();
     yyparse();
-
-    
 
     if(syntax_flag != 0){
         // print syntax error msg
@@ -484,7 +499,8 @@ void insert_symbol(Value _type, Value _ID, char* k, Value _expr) {
     // for gencode
     if(strcmp(k, "function") == 0){
         get_attribute(e_ptr);
-        gencode_func(_type, _ID);
+        create_func_table(_type, _ID);
+        // gencode_func(_type, _ID);
     }else if(strcmp(k, "variable") == 0){      
         //paremeter and variable, generate to jasim & set e_ptr->entry_val
         if(table_current->table_depth == 0){
@@ -508,6 +524,61 @@ void insert_symbol(Value _type, Value _ID, char* k, Value _expr) {
     printf("%s, %d\n", e_ptr->entry_val.id_name, e_ptr->entry_val.id_symbol_type);
  
     printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
+}
+
+void create_func_table(Value _type, Value _id){
+    printf("in create_function_table\n");
+
+    printf("hooo\n");
+    struct Func * f_ptr = malloc(sizeof(struct Func));
+    memset(f_ptr->f_name, 0, sizeof(f_ptr->f_name));
+
+    //set value
+    strcat(f_ptr->f_name, _id.id_name);   
+    f_ptr->f_type = _type.symbol_type;
+    f_ptr->f_pre = f_current;
+    f_ptr->f_count = 0;
+    
+    f_current = f_ptr;
+  
+    if(f_header == NULL){
+        f_header = f_current;
+    }
+
+    printf("*** function table, %s %d ***\n", f_ptr->f_name, f_ptr->f_type);
+}
+
+int func_return_checking(Value _type, Value _id, int flag){
+    printf("in function_return_checking\n ");
+    // declare & defined the same return type ?
+
+    struct Func * f_ptr = f_current;
+    while(f_ptr != NULL){
+        printf("hiii\n");
+        if(strcmp(f_ptr->f_name, _id.id_name) == 0){
+            if(_type.symbol_type != f_ptr->f_type ){
+                printf("different return type\n");
+                //yyerror
+                memset(error_msg, 0, sizeof(error_msg));
+                strcat(error_msg, "function return type is not the same");
+                error_flag = 1;
+
+                return 1;   //find & different return type
+            }
+
+            if(f_ptr->f_count == flag){
+                printf("redeclared\n");
+                //yyerror
+                memset(error_msg, 0, sizeof(error_msg));
+                strcat(error_msg, "Redeclared function ");
+                strcat(error_msg, f_ptr->f_name);
+                error_flag = 1;
+            }
+            return 2;   //find
+        }
+        f_ptr = f_ptr->f_pre;
+    }
+    return 0; //not find
 }
 
 void get_attribute(struct Entry * tmp){
@@ -608,6 +679,7 @@ void lookup_function(char *name, int flag){
         strcat(error_msg, name);
         error_flag = 1;
     }else{   //redeclared function
+    /*
         struct Entry * e_ptr = ptr->entry_header;
         while(e_ptr != NULL){
             if(strcmp(e_ptr->kind, "function") == 0 && strcmp(e_ptr->name, name)== 0){
@@ -615,14 +687,34 @@ void lookup_function(char *name, int flag){
                 memset(error_msg, 0, sizeof(error_msg));
                 strcat(error_msg, "Redeclared function ");
                 strcat(error_msg, name); 
+                
                 if(flag == 3)
                     func_flag = 1;
                 else
                     error_flag = 1;
+        
                 return;
             }
             e_ptr = e_ptr->entry_next;
-        }    
+        }  
+    */
+    /*
+        struct Func *f_ptr = f_current;
+        while(f_ptr != NULL){
+            if(strcmp(f_ptr->f_name, name) == 0){
+                // redeclared
+                if(f_ptr->f_count == 1){
+                    //yyerror
+                    memset(error_msg, 0, sizeof(error_msg));
+                    strcat(error_msg, "Redeclared function ");
+                    strcat(error_msg, name);
+                    error_flag = 1;
+                }
+                break;
+            }
+            f_ptr = f_ptr->f_pre;
+        }  
+        */
 
     }
 
@@ -906,13 +998,6 @@ void gencode_func(Value _type, Value _id){
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
 
-    //return_type_checking
-    if( _type.symbol_type != return_type){
-        printf("---%d, %d\n", _type.symbol_type, return_type);
-        printf("return type error !!!!\n");
-        //yyerror
-    }
-
     if(strcmp(_id.id_name, "main") == 0){   //if main function
         // printf(" ohhhh\n");
         fprintf(file, ".method public static main([Ljava/lang/String;)V\n");
@@ -968,9 +1053,6 @@ void gencode_return(Value v){
         v.symbol_type = V_Type;
     }
 
-    //set return_type for function type checking in gencode_func
-    return_type = v.symbol_type;
-
     if(v.is_arith == 1){ //case d, e
         switch(v.symbol_type){
             case I_Type:
@@ -1000,7 +1082,6 @@ void gencode_return(Value v){
                 printf("wrong return type 2 -- gencode_return, %d\n", v.symbol_type);
                 break;
         }
-        return_type = v1.symbol_type;  //set return_type to ID type
     }else{ //case a, c
         switch(v.symbol_type){
             case I_Type:
@@ -1297,7 +1378,10 @@ Value div_arith(Value A, Value B){
         || (v2.symbol_type == F_Type && v2.f == 0.0)){
         printf("cannot divide by zero!!\n ");
         //yyerror
-        return v_tmp;
+        memset(error_msg, 0, sizeof(error_msg));
+        strcat(error_msg, "Arithmetic errors - cannot divided by zero");
+        error_flag = 1;
+        return A;
     }
 
     if(v1.symbol_type == I_Type && v2.symbol_type == I_Type){       //II
@@ -1344,6 +1428,9 @@ Value mod_arith(Value A, Value B){
     }else{
         printf("wrong -- only int can mod\n");
         //yyerror
+        memset(error_msg, 0, sizeof(error_msg));
+        strcat(error_msg, "Arithmetic errors - Modulo operator only for interger");
+        error_flag = 1;
     }
 
     v_tmp.is_arith = 1;
@@ -1752,6 +1839,9 @@ Value gencode_funcall(Value _val){
     if(tmp_index != func_input_num){
         printf("different index num %d, %d\n", tmp_index, func_input_num);
         //yyerror
+        memset(error_msg, 0, sizeof(error_msg));
+        strcat(error_msg, "function formal parameter is not the same");
+        error_flag = 1;
     }
 
     //type casting
@@ -1764,7 +1854,11 @@ Value gencode_funcall(Value _val){
         }
 
         if(_type != tmp[i]){
-            printf("error is different inptu type\n");
+            printf("error is different inptut type\n");
+            //yyerror
+            memset(error_msg, 0, sizeof(error_msg));
+            strcat(error_msg, "function formal parameter is not the same");
+            error_flag = 1;
         }
 
         //gencode
