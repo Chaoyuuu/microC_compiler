@@ -94,8 +94,8 @@ id			  {letter}+({letter}|{digit})*
 "bool"      { CONCAT; yylval.val.symbol_type = B_Type; yylval.val.is_arith = 0; return(BOOL);}
 
  /* boolean Keywords */
-"true"      { CONCAT; yylval.val.i = 1; yylval.val.is_arith = 0; return(TRUE); }
-"false"     { CONCAT; yylval.val.i = 0; yylval.val.is_arith = 0; return(FALSE); }
+"true"      { CONCAT; yylval.val.i = 1; yylval.val.symbol_type = B_Type; yylval.val.is_arith = 0; return(TRUE); }
+"false"     { CONCAT; yylval.val.i = 0; yylval.val.symbol_type = B_Type; yylval.val.is_arith = 0; return(FALSE); }
 
 "return"    { CONCAT; return(RETURN); }
 
