@@ -87,15 +87,15 @@ id			  {letter}+({letter}|{digit})*
 "while"		{ CONCAT; return(WHILE); }
 
  /* Declaration Keywords */
-"void"      { CONCAT; yylval.val.symbol_type = V_Type; return(VOID); }
-"int"       { CONCAT; yylval.val.symbol_type = I_Type; return(INT);  }
-"float"  	{ CONCAT; yylval.val.symbol_type = F_Type; return(FLOAT);}
-"string"    { CONCAT; yylval.val.symbol_type = S_Type; return(STRING);}
-"bool"      { CONCAT; yylval.val.symbol_type = B_Type; return(BOOL);}
+"void"      { CONCAT; yylval.val.symbol_type = V_Type; yylval.val.is_arith = 0; return(VOID); }
+"int"       { CONCAT; yylval.val.symbol_type = I_Type; yylval.val.is_arith = 0; return(INT);  }
+"float"  	{ CONCAT; yylval.val.symbol_type = F_Type; yylval.val.is_arith = 0; return(FLOAT);}
+"string"    { CONCAT; yylval.val.symbol_type = S_Type; yylval.val.is_arith = 0; return(STRING);}
+"bool"      { CONCAT; yylval.val.symbol_type = B_Type; yylval.val.is_arith = 0; return(BOOL);}
 
  /* boolean Keywords */
-"true"      { CONCAT; yylval.val.i = 1; return(TRUE); }
-"false"     { CONCAT; yylval.val.i = 0; return(FALSE); }
+"true"      { CONCAT; yylval.val.i = 1; yylval.val.is_arith = 0; return(TRUE); }
+"false"     { CONCAT; yylval.val.i = 0; yylval.val.is_arith = 0; return(FALSE); }
 
 "return"    { CONCAT; return(RETURN); }
 
@@ -105,18 +105,21 @@ id			  {letter}+({letter}|{digit})*
 <STRING_STATE>[^"]*	    { CONCAT; 
                           yylval.val.symbol_type = S_Type; 
                           yylval.val.s = strdup(yytext);
+                          yylval.val.is_arith = 0;
                           return(STRING_CONST);
                         }
 
  /* Number Constant */
 {integer}     { CONCAT; 
                 yylval.val.symbol_type = I_Type; 
-                yylval.val.i = atoi(yytext);                 
+                yylval.val.i = atoi(yytext);
+                yylval.val.is_arith = 0;                 
                 return(I_CONST); 
               }
 {float}       { CONCAT; 
                 yylval.val.symbol_type = F_Type; 
-                yylval.val.f = atof(yytext);                  
+                yylval.val.f = atof(yytext);
+                yylval.val.is_arith = 0;                  
                 return(F_CONST); 
               }
 
@@ -139,7 +142,8 @@ id			  {letter}+({letter}|{digit})*
  /* Variable ID */
  {id}       { CONCAT; 
               yylval.val.symbol_type = ID_Type; 
-              yylval.val.id_name = strdup(yytext);               
+              yylval.val.id_name = strdup(yytext);
+              yylval.val.is_arith = 0;               
               return(ID); 
             }
 

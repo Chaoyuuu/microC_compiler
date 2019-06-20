@@ -31,6 +31,7 @@ struct Value
     Symbol_type id_symbol_type;
     int is_global;
     int id_index;
+    int is_arith;
 
 };
 

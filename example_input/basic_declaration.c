@@ -3,7 +3,8 @@ int b;
 
 float k = 2.5;
 void main() {
-    int d = 8;
+    // float d = 8+a*45 + (k*(8+7))/ 3 ;
+    float d = 4.0;
     d += 10;
    
     print(d);

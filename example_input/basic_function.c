@@ -1,9 +1,6 @@
-int foo() {
-   int d = 8;
-    d += 10;
-   
-    print(d);
-    return d;
+int foo(int a) {
+    a += 10;
+    return a;
 }
 
 void lol(int a) {
@@ -12,8 +9,8 @@ void lol(int a) {
 }
 
 void main(){
-   int a = 5;
-   // a = foo(4);
+   int a;
+   a = foo(4);
    lol(a);
    return;
 }
