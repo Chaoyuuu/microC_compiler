@@ -4,7 +4,7 @@ int b = 20;
 
 int foo(int a, int b);
 
-int foo(int a){
+int foo(int a, int b){
     int c = a +b;
     print(c);
 

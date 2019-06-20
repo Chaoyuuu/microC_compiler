@@ -123,6 +123,7 @@ extern int dump_flag;
 extern void yyerror(char *s);
 
 int func_flag = 0;
+int remove_flag = 0;
 
 
 // int cast_flag = 0;          // flag for arith casting
@@ -135,8 +136,6 @@ int func_input_num = 0;     // index of func_para_type[]
 Value func_para_type[10]; // buf for function input parameter
 Value trash_var;     // for trash value parameter
 FILE *file;         // To generate .j file for Jasmin
-
-char while_buf[5000];
 
 
 /* Symbol table function - you can add new function if needed. */
@@ -186,7 +185,7 @@ void gencode_if_arith();
 void gencode_while();
 
 
-#line 190 "y.tab.c" /* yacc.c:339  */
+#line 189 "y.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -294,14 +293,14 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 129 "compiler_hw3.y" /* yacc.c:355  */
+#line 128 "compiler_hw3.y" /* yacc.c:355  */
 
     
     Value val;
     Operator op;
 
 
-#line 305 "y.tab.c" /* yacc.c:355  */
+#line 304 "y.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -318,7 +317,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 322 "y.tab.c" /* yacc.c:358  */
+#line 321 "y.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -618,15 +617,15 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   160,   160,   161,   162,   166,   167,   168,   169,   170,
-     174,   179,   187,   192,   198,   199,   200,   201,   205,   205,
-     208,   207,   211,   210,   217,   218,   216,   231,   235,   236,
-     240,   241,   245,   246,   250,   251,   255,   256,   260,   261,
-     261,   263,   267,   268,   272,   273,   274,   278,   279,   280,
-     281,   282,   283,   287,   288,   292,   293,   294,   295,   296,
-     297,   301,   302,   306,   306,   318,   318,   333,   333,   335,
-     335,   340,   342,   347,   348,   352,   357,   365,   366,   367,
-     368,   369,   370,   381,   382,   383,   384,   385
+       0,   159,   159,   160,   161,   165,   166,   167,   168,   169,
+     173,   178,   186,   191,   197,   198,   199,   200,   204,   204,
+     207,   206,   210,   209,   216,   217,   215,   230,   234,   235,
+     239,   240,   244,   245,   249,   250,   254,   255,   259,   260,
+     260,   262,   266,   267,   271,   272,   273,   277,   278,   279,
+     280,   281,   282,   286,   287,   291,   292,   293,   294,   295,
+     296,   300,   301,   305,   305,   317,   317,   332,   332,   334,
+     334,   339,   341,   346,   347,   351,   356,   364,   365,   366,
+     367,   368,   369,   380,   381,   382,   383,   384
 };
 #endif
 
@@ -1505,81 +1504,81 @@ yyreduce:
   switch (yyn)
     {
         case 10:
-#line 174 "compiler_hw3.y" /* yacc.c:1646  */
+#line 173 "compiler_hw3.y" /* yacc.c:1646  */
     { lookup_symbol((yyvsp[-3].val).id_name, 1); 
                                           if(error_flag != 1){
                                             insert_symbol((yyvsp[-4].val), (yyvsp[-3].val), type_v, (yyvsp[-1].val));
                                           }
                                         }
-#line 1515 "y.tab.c" /* yacc.c:1646  */
+#line 1514 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 179 "compiler_hw3.y" /* yacc.c:1646  */
+#line 178 "compiler_hw3.y" /* yacc.c:1646  */
     { lookup_symbol((yyvsp[-1].val).id_name, 1); 
                           if(error_flag != 1){
                             insert_symbol((yyvsp[-2].val), (yyvsp[-1].val), type_v, trash_var); 
                           }
                         }
-#line 1525 "y.tab.c" /* yacc.c:1646  */
+#line 1524 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 187 "compiler_hw3.y" /* yacc.c:1646  */
+#line 186 "compiler_hw3.y" /* yacc.c:1646  */
     { gencode_print((yyvsp[-2].val)); }
-#line 1531 "y.tab.c" /* yacc.c:1646  */
+#line 1530 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 194 "compiler_hw3.y" /* yacc.c:1646  */
+#line 193 "compiler_hw3.y" /* yacc.c:1646  */
     { dump_table(); dump_flag = 1;}
-#line 1537 "y.tab.c" /* yacc.c:1646  */
+#line 1536 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 198 "compiler_hw3.y" /* yacc.c:1646  */
+#line 197 "compiler_hw3.y" /* yacc.c:1646  */
     { /* printf("&&&&&&&& is select\n"); */}
-#line 1543 "y.tab.c" /* yacc.c:1646  */
+#line 1542 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 200 "compiler_hw3.y" /* yacc.c:1646  */
+#line 199 "compiler_hw3.y" /* yacc.c:1646  */
     { /* printf("&&&&&&&&is  expression\n"); */}
-#line 1549 "y.tab.c" /* yacc.c:1646  */
+#line 1548 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 205 "compiler_hw3.y" /* yacc.c:1646  */
+#line 204 "compiler_hw3.y" /* yacc.c:1646  */
     { create_symbol(); }
-#line 1555 "y.tab.c" /* yacc.c:1646  */
+#line 1554 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 208 "compiler_hw3.y" /* yacc.c:1646  */
+#line 207 "compiler_hw3.y" /* yacc.c:1646  */
     { create_symbol(); }
-#line 1561 "y.tab.c" /* yacc.c:1646  */
+#line 1560 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 211 "compiler_hw3.y" /* yacc.c:1646  */
+#line 210 "compiler_hw3.y" /* yacc.c:1646  */
     { create_symbol(); }
-#line 1567 "y.tab.c" /* yacc.c:1646  */
+#line 1566 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 217 "compiler_hw3.y" /* yacc.c:1646  */
+#line 216 "compiler_hw3.y" /* yacc.c:1646  */
     { create_symbol(); }
-#line 1573 "y.tab.c" /* yacc.c:1646  */
+#line 1572 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 218 "compiler_hw3.y" /* yacc.c:1646  */
+#line 217 "compiler_hw3.y" /* yacc.c:1646  */
     { gencode_while((yyvsp[-1].val)); }
-#line 1579 "y.tab.c" /* yacc.c:1646  */
+#line 1578 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 219 "compiler_hw3.y" /* yacc.c:1646  */
+#line 218 "compiler_hw3.y" /* yacc.c:1646  */
     { char ttmp[50]; 
                               memset(ttmp, 0, sizeof(ttmp));
                               sprintf(ttmp, "\tgoto label_%d\n",label_index - 2 );
@@ -1588,227 +1587,227 @@ yyreduce:
                               sprintf(ttmp, "label_%d:\n",label_index );
                               strcat(func_buf, ttmp);
                             }
-#line 1592 "y.tab.c" /* yacc.c:1646  */
+#line 1591 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 28:
-#line 235 "compiler_hw3.y" /* yacc.c:1646  */
+#line 234 "compiler_hw3.y" /* yacc.c:1646  */
     {}
-#line 1598 "y.tab.c" /* yacc.c:1646  */
+#line 1597 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 29:
-#line 236 "compiler_hw3.y" /* yacc.c:1646  */
+#line 235 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = switch_assign_op((yyvsp[-2].val), (yyvsp[-1].op), (yyvsp[0].val)); }
-#line 1604 "y.tab.c" /* yacc.c:1646  */
+#line 1603 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 30:
-#line 240 "compiler_hw3.y" /* yacc.c:1646  */
+#line 239 "compiler_hw3.y" /* yacc.c:1646  */
     {}
-#line 1610 "y.tab.c" /* yacc.c:1646  */
+#line 1609 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 241 "compiler_hw3.y" /* yacc.c:1646  */
+#line 240 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = switch_relation_op((yyvsp[-2].val), (yyvsp[-1].op), (yyvsp[0].val)); }
-#line 1616 "y.tab.c" /* yacc.c:1646  */
+#line 1615 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 32:
-#line 245 "compiler_hw3.y" /* yacc.c:1646  */
+#line 244 "compiler_hw3.y" /* yacc.c:1646  */
     {}
-#line 1622 "y.tab.c" /* yacc.c:1646  */
+#line 1621 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 246 "compiler_hw3.y" /* yacc.c:1646  */
+#line 245 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = switch_addition_op((yyvsp[-2].val), (yyvsp[-1].op), (yyvsp[0].val)); }
-#line 1628 "y.tab.c" /* yacc.c:1646  */
+#line 1627 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 34:
-#line 250 "compiler_hw3.y" /* yacc.c:1646  */
+#line 249 "compiler_hw3.y" /* yacc.c:1646  */
     {}
-#line 1634 "y.tab.c" /* yacc.c:1646  */
+#line 1633 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 35:
-#line 251 "compiler_hw3.y" /* yacc.c:1646  */
+#line 250 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = switch_mul_op((yyvsp[-2].val), (yyvsp[-1].op), (yyvsp[0].val)); }
-#line 1640 "y.tab.c" /* yacc.c:1646  */
+#line 1639 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 255 "compiler_hw3.y" /* yacc.c:1646  */
+#line 254 "compiler_hw3.y" /* yacc.c:1646  */
     {}
-#line 1646 "y.tab.c" /* yacc.c:1646  */
+#line 1645 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 37:
-#line 256 "compiler_hw3.y" /* yacc.c:1646  */
+#line 255 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = switch_postfix_op((yyvsp[-1].val), (yyvsp[0].op)); }
-#line 1652 "y.tab.c" /* yacc.c:1646  */
+#line 1651 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 38:
-#line 260 "compiler_hw3.y" /* yacc.c:1646  */
+#line 259 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = (yyvsp[0].val); }
-#line 1658 "y.tab.c" /* yacc.c:1646  */
+#line 1657 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 39:
-#line 261 "compiler_hw3.y" /* yacc.c:1646  */
+#line 260 "compiler_hw3.y" /* yacc.c:1646  */
     { lookup_function((yyvsp[0].val).id_name, 1); }
-#line 1664 "y.tab.c" /* yacc.c:1646  */
+#line 1663 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 40:
-#line 262 "compiler_hw3.y" /* yacc.c:1646  */
+#line 261 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = gencode_funcall((yyvsp[-2].val)); }
-#line 1670 "y.tab.c" /* yacc.c:1646  */
+#line 1669 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 263 "compiler_hw3.y" /* yacc.c:1646  */
+#line 262 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = (yyvsp[-1].val); }
-#line 1676 "y.tab.c" /* yacc.c:1646  */
+#line 1675 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 42:
-#line 267 "compiler_hw3.y" /* yacc.c:1646  */
+#line 266 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = INC_OPT; }
-#line 1682 "y.tab.c" /* yacc.c:1646  */
+#line 1681 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 268 "compiler_hw3.y" /* yacc.c:1646  */
+#line 267 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = DEC_OPT; }
-#line 1688 "y.tab.c" /* yacc.c:1646  */
+#line 1687 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 272 "compiler_hw3.y" /* yacc.c:1646  */
+#line 271 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = MUL_OPT; }
-#line 1694 "y.tab.c" /* yacc.c:1646  */
+#line 1693 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 273 "compiler_hw3.y" /* yacc.c:1646  */
+#line 272 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = DIV_OPT; }
-#line 1700 "y.tab.c" /* yacc.c:1646  */
+#line 1699 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 274 "compiler_hw3.y" /* yacc.c:1646  */
+#line 273 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = MOD_OPT; }
-#line 1706 "y.tab.c" /* yacc.c:1646  */
+#line 1705 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 278 "compiler_hw3.y" /* yacc.c:1646  */
+#line 277 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = MORE_OPT; }
-#line 1712 "y.tab.c" /* yacc.c:1646  */
+#line 1711 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 279 "compiler_hw3.y" /* yacc.c:1646  */
+#line 278 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = LESS_OPT; }
-#line 1718 "y.tab.c" /* yacc.c:1646  */
+#line 1717 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 280 "compiler_hw3.y" /* yacc.c:1646  */
+#line 279 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = GE_OPT; }
-#line 1724 "y.tab.c" /* yacc.c:1646  */
+#line 1723 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 281 "compiler_hw3.y" /* yacc.c:1646  */
+#line 280 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = LE_OPT; }
-#line 1730 "y.tab.c" /* yacc.c:1646  */
+#line 1729 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 282 "compiler_hw3.y" /* yacc.c:1646  */
+#line 281 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = EQ_OPT; }
-#line 1736 "y.tab.c" /* yacc.c:1646  */
+#line 1735 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 283 "compiler_hw3.y" /* yacc.c:1646  */
+#line 282 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = NE_OPT; }
-#line 1742 "y.tab.c" /* yacc.c:1646  */
+#line 1741 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 287 "compiler_hw3.y" /* yacc.c:1646  */
+#line 286 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = ADD_OPT; }
-#line 1748 "y.tab.c" /* yacc.c:1646  */
+#line 1747 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 288 "compiler_hw3.y" /* yacc.c:1646  */
+#line 287 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = MINUS_OPT; }
-#line 1754 "y.tab.c" /* yacc.c:1646  */
+#line 1753 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 292 "compiler_hw3.y" /* yacc.c:1646  */
+#line 291 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = ADD_ASSIGN_OPT; }
-#line 1760 "y.tab.c" /* yacc.c:1646  */
+#line 1759 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 293 "compiler_hw3.y" /* yacc.c:1646  */
+#line 292 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = SUB_ASSIGN_OPT; }
-#line 1766 "y.tab.c" /* yacc.c:1646  */
+#line 1765 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 294 "compiler_hw3.y" /* yacc.c:1646  */
+#line 293 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = MUL_ASSIGN_OPT; }
-#line 1772 "y.tab.c" /* yacc.c:1646  */
+#line 1771 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 295 "compiler_hw3.y" /* yacc.c:1646  */
+#line 294 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = DIV_ASSIGN_OPT; }
-#line 1778 "y.tab.c" /* yacc.c:1646  */
+#line 1777 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 296 "compiler_hw3.y" /* yacc.c:1646  */
+#line 295 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = MOD_ASSIGN_OPT; }
-#line 1784 "y.tab.c" /* yacc.c:1646  */
+#line 1783 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 60:
-#line 297 "compiler_hw3.y" /* yacc.c:1646  */
+#line 296 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.op) = ASSIGN_OPT; }
-#line 1790 "y.tab.c" /* yacc.c:1646  */
+#line 1789 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 61:
-#line 301 "compiler_hw3.y" /* yacc.c:1646  */
+#line 300 "compiler_hw3.y" /* yacc.c:1646  */
     { gencode_return((yyvsp[-1].val)); }
-#line 1796 "y.tab.c" /* yacc.c:1646  */
+#line 1795 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 62:
-#line 302 "compiler_hw3.y" /* yacc.c:1646  */
+#line 301 "compiler_hw3.y" /* yacc.c:1646  */
     { gencode_return(trash_var); }
-#line 1802 "y.tab.c" /* yacc.c:1646  */
+#line 1801 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 63:
-#line 306 "compiler_hw3.y" /* yacc.c:1646  */
+#line 305 "compiler_hw3.y" /* yacc.c:1646  */
     { func_return_checking((yyvsp[-2].val), (yyvsp[-1].val), 0); }
-#line 1808 "y.tab.c" /* yacc.c:1646  */
+#line 1807 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 307 "compiler_hw3.y" /* yacc.c:1646  */
+#line 306 "compiler_hw3.y" /* yacc.c:1646  */
     { // lookup_function($2.id_name, 3);      //declare
 
                                           int a = 1;
@@ -1820,17 +1819,17 @@ yyreduce:
                                           gencode_func((yyvsp[-4].val), (yyvsp[-3].val));
 
                                         }
-#line 1824 "y.tab.c" /* yacc.c:1646  */
+#line 1823 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 318 "compiler_hw3.y" /* yacc.c:1646  */
+#line 317 "compiler_hw3.y" /* yacc.c:1646  */
     { func_return_checking((yyvsp[-2].val), (yyvsp[-1].val), 0); }
-#line 1830 "y.tab.c" /* yacc.c:1646  */
+#line 1829 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 319 "compiler_hw3.y" /* yacc.c:1646  */
+#line 318 "compiler_hw3.y" /* yacc.c:1646  */
     { dump_table();                             //define
                                       // lookup_function($2.id_name, 2); 
                                     //   int a = func_return_checking($1, $2, 1);
@@ -1842,122 +1841,122 @@ yyreduce:
                                       }
                                       f_current->f_count = 1;
                                     }
-#line 1846 "y.tab.c" /* yacc.c:1646  */
+#line 1845 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 333 "compiler_hw3.y" /* yacc.c:1646  */
+#line 332 "compiler_hw3.y" /* yacc.c:1646  */
     { create_symbol(); }
-#line 1852 "y.tab.c" /* yacc.c:1646  */
+#line 1851 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 69:
-#line 335 "compiler_hw3.y" /* yacc.c:1646  */
+#line 334 "compiler_hw3.y" /* yacc.c:1646  */
     { create_symbol(); }
-#line 1858 "y.tab.c" /* yacc.c:1646  */
+#line 1857 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 71:
-#line 340 "compiler_hw3.y" /* yacc.c:1646  */
+#line 339 "compiler_hw3.y" /* yacc.c:1646  */
     { insert_symbol((yyvsp[-1].val), (yyvsp[0].val), type_p, trash_var); 
                                      set_func_para((yyvsp[-1].val), 1);}
-#line 1865 "y.tab.c" /* yacc.c:1646  */
+#line 1864 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 72:
-#line 343 "compiler_hw3.y" /* yacc.c:1646  */
+#line 342 "compiler_hw3.y" /* yacc.c:1646  */
     { insert_symbol((yyvsp[-1].val), (yyvsp[0].val), type_p, trash_var); set_func_para((yyvsp[-1].val), 0);}
-#line 1871 "y.tab.c" /* yacc.c:1646  */
+#line 1870 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 75:
-#line 352 "compiler_hw3.y" /* yacc.c:1646  */
+#line 351 "compiler_hw3.y" /* yacc.c:1646  */
     { if((yyvsp[0].val).symbol_type == ID_Type){
                                             func_para_type[func_input_num++] = get_id_entry((yyvsp[0].val));
                                           }else
                                             func_para_type[func_input_num++] = (yyvsp[0].val);
                                         }
-#line 1881 "y.tab.c" /* yacc.c:1646  */
+#line 1880 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 76:
-#line 357 "compiler_hw3.y" /* yacc.c:1646  */
+#line 356 "compiler_hw3.y" /* yacc.c:1646  */
     { if((yyvsp[0].val).symbol_type == ID_Type){
                         func_para_type[func_input_num++] = get_id_entry((yyvsp[0].val));
                       }else
                         func_para_type[func_input_num++] = (yyvsp[0].val); 
                     }
-#line 1891 "y.tab.c" /* yacc.c:1646  */
+#line 1890 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 77:
-#line 365 "compiler_hw3.y" /* yacc.c:1646  */
+#line 364 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = yylval.val; }
-#line 1897 "y.tab.c" /* yacc.c:1646  */
+#line 1896 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 78:
-#line 366 "compiler_hw3.y" /* yacc.c:1646  */
+#line 365 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = yylval.val; }
-#line 1903 "y.tab.c" /* yacc.c:1646  */
+#line 1902 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 79:
-#line 367 "compiler_hw3.y" /* yacc.c:1646  */
+#line 366 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = yylval.val; }
-#line 1909 "y.tab.c" /* yacc.c:1646  */
+#line 1908 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 80:
-#line 368 "compiler_hw3.y" /* yacc.c:1646  */
+#line 367 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = yylval.val; }
-#line 1915 "y.tab.c" /* yacc.c:1646  */
+#line 1914 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 81:
-#line 369 "compiler_hw3.y" /* yacc.c:1646  */
+#line 368 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = yylval.val; }
-#line 1921 "y.tab.c" /* yacc.c:1646  */
+#line 1920 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 82:
-#line 370 "compiler_hw3.y" /* yacc.c:1646  */
+#line 369 "compiler_hw3.y" /* yacc.c:1646  */
     { lookup_symbol((yyvsp[0].val).id_name, 2); (yyval.val) = yylval.val; }
-#line 1927 "y.tab.c" /* yacc.c:1646  */
+#line 1926 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 83:
-#line 381 "compiler_hw3.y" /* yacc.c:1646  */
+#line 380 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = yylval.val; }
-#line 1933 "y.tab.c" /* yacc.c:1646  */
+#line 1932 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 84:
-#line 382 "compiler_hw3.y" /* yacc.c:1646  */
+#line 381 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = yylval.val; }
-#line 1939 "y.tab.c" /* yacc.c:1646  */
+#line 1938 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 85:
-#line 383 "compiler_hw3.y" /* yacc.c:1646  */
+#line 382 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = yylval.val; }
-#line 1945 "y.tab.c" /* yacc.c:1646  */
+#line 1944 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 86:
-#line 384 "compiler_hw3.y" /* yacc.c:1646  */
+#line 383 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = yylval.val; }
-#line 1951 "y.tab.c" /* yacc.c:1646  */
+#line 1950 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 87:
-#line 385 "compiler_hw3.y" /* yacc.c:1646  */
+#line 384 "compiler_hw3.y" /* yacc.c:1646  */
     { (yyval.val) = yylval.val; }
-#line 1957 "y.tab.c" /* yacc.c:1646  */
+#line 1956 "y.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 1961 "y.tab.c" /* yacc.c:1646  */
+#line 1960 "y.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2185,7 +2184,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 388 "compiler_hw3.y" /* yacc.c:1906  */
+#line 387 "compiler_hw3.y" /* yacc.c:1906  */
 
 
 /* C code section */
@@ -2213,6 +2212,11 @@ int main(int argc, char** argv)
         printf("\n|-----------------------------------------------|\n\n");
         return 0;
     } 
+
+
+    if(remove_flag == 1){  //delete .j
+        remove("compiler_hw3.j");
+    }
     
     dump_table();
     dump_symbol();
@@ -2225,6 +2229,7 @@ int main(int argc, char** argv)
 
 void yyerror(char *s)
 {
+    remove_flag = 1;
     if(!strcmp(s, "syntax error")){
         // printf("in syntax error");
         memset(syntax_buf, 0, sizeof(syntax_buf));
@@ -2257,7 +2262,7 @@ void create_symbol() {
         table_header = table_current;
     }
 
-    printf("\n----in create_symbol, depth = %d, current = %p----\n", ptr->table_depth, table_current);
+    // printf("\n----in create_symbol, depth = %d, current = %p----\n", ptr->table_depth, table_current);
 }
 
 void insert_symbol(Value _type, Value _ID, char* k, Value _expr) {
@@ -2345,15 +2350,12 @@ void insert_symbol(Value _type, Value _ID, char* k, Value _expr) {
         printf("error in -- insert_symbol\n");
     }
 
-    printf("%s, %d\n", e_ptr->entry_val.id_name, e_ptr->entry_val.id_symbol_type);
- 
-    printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
+    // printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
 }
 
 void create_func_table(Value _type, Value _id){
-    printf("in create_function_table\n");
+    // printf("in create_function_table\n");
 
-    printf("hooo\n");
     struct Func * f_ptr = malloc(sizeof(struct Func));
     memset(f_ptr->f_name, 0, sizeof(f_ptr->f_name));
     memset(f_ptr->f_attr, 0, sizeof(f_ptr->f_attr));
@@ -2371,11 +2373,11 @@ void create_func_table(Value _type, Value _id){
         f_header = f_current;
     }
 
-    printf("*** function table, %s %d ***\n", f_ptr->f_name, f_ptr->f_type);
+    // printf("*** function table, %s %d ***\n", f_ptr->f_name, f_ptr->f_type);
 }
 
 int func_return_checking(Value _type, Value _id, int flag){
-    printf("in function_return_checking\n ");
+    // printf("in function_return_checking\n ");
     // declare & defined the same return type ?
 
     struct Func * f_ptr = f_current;
@@ -2385,7 +2387,7 @@ int func_return_checking(Value _type, Value _id, int flag){
             // printf("hiii222\n");
             if(_type.symbol_type != f_ptr->f_type ){
                 if(strcmp(f_ptr->f_attr, func_para_2) != 0){
-                    printf("different return type\n");
+                    // printf("different return type\n");
                     //yyerror
                     memset(error_msg, 0, sizeof(error_msg));
                     strcat(error_msg, "1. function return type is not the same\n");
@@ -2401,10 +2403,10 @@ int func_return_checking(Value _type, Value _id, int flag){
                 return 1;   //find & different return type
             }
 
-            printf("%s, %s = %s\n", f_ptr->f_name, f_ptr->f_attr, func_para_2);
+            // printf("%s, %s = %s\n", f_ptr->f_name, f_ptr->f_attr, func_para_2);
 
             if(strcmp(f_ptr->f_attr, func_para_2) != 0){
-                printf("different return type\n");
+                // printf("different return type\n");
                 //yyerror
                 memset(error_msg, 0, sizeof(error_msg));
                 strcat(error_msg, "function formal patameter is not the same");
@@ -2412,7 +2414,7 @@ int func_return_checking(Value _type, Value _id, int flag){
             }
 
             if(f_ptr->f_count == flag){
-                printf("redeclared\n");
+                // printf("redeclared\n");
                 //yyerror
                 memset(error_msg, 0, sizeof(error_msg));
                 strcat(error_msg, "Redeclared function ");
@@ -2624,7 +2626,7 @@ void dump_symbol() {
 
 //code generation function
 Value gencode_global_1(Value _type, Value _id, Value _expr, Value vval){
-    printf("in gencode_1\n");
+    // printf("in gencode_1\n");
     fprintf(file, ".field public static");
     /* Example:
       a. only const
@@ -2661,12 +2663,12 @@ Value gencode_global_1(Value _type, Value _id, Value _expr, Value vval){
     }
 
     fprintf(file, "%s", input_tmp);
-    printf("%s", input_tmp);
+    // printf("%s", input_tmp);
     return _val;
 }
 
 Value gencode_global_2(Value _type, Value _id, Value vval){
-    printf("in gencode_2\n");
+    // printf("in gencode_2\n");
     fprintf(file, ".field public static");
 
     Value _val;
@@ -2696,13 +2698,13 @@ Value gencode_global_2(Value _type, Value _id, Value vval){
     }
 
     fprintf(file, "%s", input_tmp);
-    printf("%s", input_tmp);    
+    // printf("%s", input_tmp);    
     // printf("%s, _id = %s, %d\n", input_tmp, _val.id_name, _val.id_symbol_type);
     return _val;
 }
 
 Value gencode_local_1(Value _type, Value _id, Value _expr, int index, Value vval){
-    printf("in gencode_local_1\n");
+    // printf("in gencode_local_1\n");
     /* Example:
        a. int a = 5;        ldc const
        b. int a = b;        find b ID
@@ -2809,12 +2811,12 @@ Value gencode_local_1(Value _type, Value _id, Value _expr, int index, Value vval
     }
     
     strcat(func_buf, input_tmp);
-    printf("%s", input_tmp);
+    // printf("%s", input_tmp);
     return _val;
 }
 
 Value gencode_local_2(Value _type, Value _id, int index, Value vval){
-    printf("in gencode_local_2\n");
+    // printf("in gencode_local_2\n");
 
     Value _val;
     _val.id_name = _id.id_name;
@@ -2847,12 +2849,12 @@ Value gencode_local_2(Value _type, Value _id, int index, Value vval){
     }
 
     strcat(func_buf, input_tmp);
-    printf("%s", input_tmp);
+    // printf("%s", input_tmp);
     return _val;
 }
 
 Value gencode_parameter(Value _type, Value _id, int index){
-    printf("in gencode_parameter\n");
+    // printf("in gencode_parameter\n");
 
     Value _val;
     _val.id_name = _id.id_name;
@@ -2864,7 +2866,7 @@ Value gencode_parameter(Value _type, Value _id, int index){
 }
 
 void gencode_func(Value _type, Value _id){
-    printf("in gencode_func\n");
+    // printf("in gencode_func\n");
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
 
@@ -2891,23 +2893,23 @@ void gencode_func(Value _type, Value _id){
                 break;
         }    
         fprintf(file, "%s", input_tmp);
-        printf("%s", input_tmp);
+        // printf("%s", input_tmp);
     }
 
     fprintf(file, ".limit stack 50\n.limit locals 50\n");
     fprintf(file, "%s", func_buf);
     fprintf(file, ".end method\n");
 
-    printf("%s", ".limit stack 50\n.limit locals 50\n");
-    printf("%s", func_buf);
-    printf(".end method\n");
+    // printf("%s", ".limit stack 50\n.limit locals 50\n");
+    // printf("%s", func_buf);
+    // printf(".end method\n");
 
     memset(func_buf, 0, sizeof(func_buf));       
     return;
 }
 
 void gencode_return(Value v){
-    printf("in gencode_return\n");
+    // printf("in gencode_return\n");
     /* Example: 
        a. return;
        b. return a;
@@ -2975,7 +2977,7 @@ void gencode_return(Value v){
 }
 
 void gencode_print(Value v){ 
-    printf("in gencode_print\n");
+    // printf("in gencode_print\n");
     /* Example: only print int, float, string variables and constants
        a. print(1);
        b. print("HELLO");
@@ -3023,7 +3025,7 @@ void gencode_print(Value v){
 
 //expression function
 Value switch_mul_op(Value v1, Operator op, Value v2){
-    printf("in switch_mul_op\n");
+    // printf("in switch_mul_op\n");
     
     switch (op){
         case MUL_OPT:
@@ -3039,7 +3041,7 @@ Value switch_mul_op(Value v1, Operator op, Value v2){
 }
 
 Value switch_addition_op(Value v1, Operator op, Value v2){
-    printf("in switch_addition_op\n");
+    // printf("in switch_addition_op\n");
     switch (op) {
         case ADD_OPT:
             return add_arith(v1, v2);
@@ -3052,7 +3054,7 @@ Value switch_addition_op(Value v1, Operator op, Value v2){
 }
 
 Value switch_postfix_op(Value v1, Operator op){
-    printf("in switch_postfix_op\n");
+    // printf("in switch_postfix_op\n");
     Value tmp;
     tmp.symbol_type = I_Type;
     tmp.i = 1;
@@ -3077,7 +3079,7 @@ Value switch_postfix_op(Value v1, Operator op){
 }
 
 Value switch_assign_op(Value v1, Operator op, Value v2){
-    printf("in switch_assign_op\n");
+    // printf("in switch_assign_op\n");
     // LHS_val = RHS_val
     Value RHS_val;
     Value LHS_val;
@@ -3134,7 +3136,7 @@ Value switch_assign_op(Value v1, Operator op, Value v2){
 }
 
 Value switch_relation_op(Value A, Operator op, Value B){
-    printf("in switch_relation_op\n");
+    // printf("in switch_relation_op\n");
     /* Example:
        a. x == y
        b. x != 3
@@ -3160,8 +3162,6 @@ Value switch_relation_op(Value A, Operator op, Value B){
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
 
-    //????????????
-    memset(while_buf, 0, sizeof(while_buf));
 
     sprintf(input_tmp, "label_%d:\n", ++label_index);
     strcat(func_buf, input_tmp);
@@ -3228,7 +3228,7 @@ Value switch_relation_op(Value A, Operator op, Value B){
 
 //arithmetic function
 Value mul_arith(Value A, Value B){
-    printf("in mul_arith\n");
+    // printf("in mul_arith\n");
     
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
@@ -3264,7 +3264,7 @@ Value mul_arith(Value A, Value B){
 }
 
 Value div_arith(Value A, Value B){
-    printf("in div_arith\n");
+    // printf("in div_arith\n");
     
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
@@ -3276,7 +3276,7 @@ Value div_arith(Value A, Value B){
     //cannot divide by zero
     if((v2.symbol_type == I_Type && v2.i == 0)
         || (v2.symbol_type == F_Type && v2.f == 0.0)){
-        printf("cannot divide by zero!!\n ");
+        // printf("cannot divide by zero!!\n ");
         //yyerror
         memset(error_msg, 0, sizeof(error_msg));
         strcat(error_msg, "Arithmetic errors - cannot divided by zero");
@@ -3311,7 +3311,7 @@ Value div_arith(Value A, Value B){
 }
 
 Value mod_arith(Value A, Value B){
-    printf("in mod_arith\n");
+    // printf("in mod_arith\n");
 
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
@@ -3326,7 +3326,7 @@ Value mod_arith(Value A, Value B){
         v_tmp.i = (v1.i)%(v2.i);
         strcat(func_buf, "\tirem\n");
     }else{
-        printf("wrong -- only int can mod\n");
+        // printf("wrong -- only int can mod\n");
         //yyerror
         memset(error_msg, 0, sizeof(error_msg));
         strcat(error_msg, "Arithmetic errors - Modulo operator only for interger");
@@ -3339,7 +3339,7 @@ Value mod_arith(Value A, Value B){
 }
 
 Value add_arith(Value A, Value B){
-    printf("in add_arith\n");
+    // printf("in add_arith\n");
     // printf("%d, %d, %s,,,%d\n", A.symbol_type, A.id_symbol_type, A.id_name, B.symbol_type);
     
     Value v1 = get_id_value(A, 1);
@@ -3378,7 +3378,7 @@ Value add_arith(Value A, Value B){
 }
 
 Value minus_arith(Value A, Value B){
-    printf("in minus_arith\n");
+    // printf("in minus_arith\n");
     
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
@@ -3449,7 +3449,7 @@ Value get_id_value(Value v, int flag){
         }
         ptr = ptr->pre;
     }
-    printf("Not Find ID -- get_id_value !!!!\n");
+    // printf("Not Find ID -- get_id_value !!!!\n");
     return _val;
 }
 
@@ -3474,7 +3474,7 @@ Value get_id_entry(Value v){
         }
         ptr = ptr->pre;
     }
-    printf("Not Find ID -- get_id_entry !!!!\n");
+    // printf("Not Find ID -- get_id_entry !!!!\n");
     return v;
 }
 
@@ -3579,7 +3579,7 @@ void gencode_istore (Value v){
             }
         }
     }else{  // the const
-        printf("store in const ??? -- gencode_istore\n");
+        // printf("store in const ??? -- gencode_istore\n");
     }
 
     strcat(func_buf, input_tmp);
@@ -3646,7 +3646,7 @@ void gencode_if_arith(Value A, Value B, int flag){
             case 1:
                 break;
             case 2:
-                printf("in speeeeeical case\n");
+                // printf("in speeeeeical case\n");
                 strcat(func_buf, "\tswap\n\ti2f\n");
                 break;
             case 3:
@@ -3657,13 +3657,13 @@ void gencode_if_arith(Value A, Value B, int flag){
                 break;
         }   
     }else{
-        printf("error in -- gencode_if_arith\n");
+        // printf("error in -- gencode_if_arith\n");
     }
     return;
 }
 
 Value gencode_funcall(Value _val){     
-    printf("in gencode_funcall\n");
+    // printf("in gencode_funcall\n");
     /* Example: a = foo(6);
        ldc 6
        invokestatic compiler_hw3/foo(I)I
@@ -3712,7 +3712,7 @@ Value gencode_funcall(Value _val){
                     tmp[tmp_index++] = B_Type;
                     strcat(para_tmp, "I");
                 }else{
-                    printf("wrong !!!\n");
+                    // printf("wrong !!!\n");
                 }
                 token = strtok (NULL, delim);
             } 
@@ -3728,7 +3728,7 @@ Value gencode_funcall(Value _val){
                 sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)V\n", e_ptr->name, para_tmp);
                 v.symbol_type = V_Type;
             }else{
-                printf("wrong !!!\n");
+                // printf("wrong !!!\n");
             }
             break;
         }
@@ -3737,7 +3737,7 @@ Value gencode_funcall(Value _val){
 
     //is same # of parameter ?
     if(tmp_index != func_input_num){
-        printf("different index num %d, %d\n", tmp_index, func_input_num);
+        // printf("different index num %d, %d\n", tmp_index, func_input_num);
         //yyerror
         memset(error_msg, 0, sizeof(error_msg));
         strcat(error_msg, "function formal parameter is not the same");
@@ -3754,7 +3754,7 @@ Value gencode_funcall(Value _val){
         }
 
         if(_type != tmp[i]){
-            printf("error is different inptut type\n");
+            // printf("error is different inptut type\n");
             //yyerror
             memset(error_msg, 0, sizeof(error_msg));
             strcat(error_msg, "function formal parameter is not the same");
@@ -3772,12 +3772,12 @@ Value gencode_funcall(Value _val){
 }
 
 void gencode_while(Value v){
-    printf("in gencode_while\n");
+    // printf("in gencode_while\n");
 
     char input_tmp[200];
     memset(input_tmp, 0, sizeof(input_tmp));
 
-    printf("the index_num = %d\n", label_index);
+    // printf("the index_num = %d\n", label_index);
 
     sprintf(input_tmp, "label_%d:\n", label_index -1);
     strcat(func_buf, input_tmp);

@@ -59,6 +59,7 @@ extern int dump_flag;
 extern void yyerror(char *s);
 
 int func_flag = 0;
+int remove_flag = 0;
 
 
 // int cast_flag = 0;          // flag for arith casting
@@ -71,8 +72,6 @@ int func_input_num = 0;     // index of func_para_type[]
 Value func_para_type[10]; // buf for function input parameter
 Value trash_var;     // for trash value parameter
 FILE *file;         // To generate .j file for Jasmin
-
-char while_buf[5000];
 
 
 /* Symbol table function - you can add new function if needed. */
@@ -412,6 +411,11 @@ int main(int argc, char** argv)
         printf("\n|-----------------------------------------------|\n\n");
         return 0;
     } 
+
+
+    if(remove_flag == 1){  //delete .j
+        remove("compiler_hw3.j");
+    }
     
     dump_table();
     dump_symbol();
@@ -424,6 +428,7 @@ int main(int argc, char** argv)
 
 void yyerror(char *s)
 {
+    remove_flag = 1;
     if(!strcmp(s, "syntax error")){
         // printf("in syntax error");
         memset(syntax_buf, 0, sizeof(syntax_buf));
@@ -456,7 +461,7 @@ void create_symbol() {
         table_header = table_current;
     }
 
-    printf("\n----in create_symbol, depth = %d, current = %p----\n", ptr->table_depth, table_current);
+    // printf("\n----in create_symbol, depth = %d, current = %p----\n", ptr->table_depth, table_current);
 }
 
 void insert_symbol(Value _type, Value _ID, char* k, Value _expr) {
@@ -544,15 +549,12 @@ void insert_symbol(Value _type, Value _ID, char* k, Value _expr) {
         printf("error in -- insert_symbol\n");
     }
 
-    printf("%s, %d\n", e_ptr->entry_val.id_name, e_ptr->entry_val.id_symbol_type);
- 
-    printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
+    // printf("\n++++%d, %s, %s, %s, %d++++\n", e_ptr->index, e_ptr->name, e_ptr->kind, e_ptr->type, e_ptr->scope);
 }
 
 void create_func_table(Value _type, Value _id){
-    printf("in create_function_table\n");
+    // printf("in create_function_table\n");
 
-    printf("hooo\n");
     struct Func * f_ptr = malloc(sizeof(struct Func));
     memset(f_ptr->f_name, 0, sizeof(f_ptr->f_name));
     memset(f_ptr->f_attr, 0, sizeof(f_ptr->f_attr));
@@ -570,11 +572,11 @@ void create_func_table(Value _type, Value _id){
         f_header = f_current;
     }
 
-    printf("*** function table, %s %d ***\n", f_ptr->f_name, f_ptr->f_type);
+    // printf("*** function table, %s %d ***\n", f_ptr->f_name, f_ptr->f_type);
 }
 
 int func_return_checking(Value _type, Value _id, int flag){
-    printf("in function_return_checking\n ");
+    // printf("in function_return_checking\n ");
     // declare & defined the same return type ?
 
     struct Func * f_ptr = f_current;
@@ -584,7 +586,7 @@ int func_return_checking(Value _type, Value _id, int flag){
             // printf("hiii222\n");
             if(_type.symbol_type != f_ptr->f_type ){
                 if(strcmp(f_ptr->f_attr, func_para_2) != 0){
-                    printf("different return type\n");
+                    // printf("different return type\n");
                     //yyerror
                     memset(error_msg, 0, sizeof(error_msg));
                     strcat(error_msg, "1. function return type is not the same\n");
@@ -600,10 +602,10 @@ int func_return_checking(Value _type, Value _id, int flag){
                 return 1;   //find & different return type
             }
 
-            printf("%s, %s = %s\n", f_ptr->f_name, f_ptr->f_attr, func_para_2);
+            // printf("%s, %s = %s\n", f_ptr->f_name, f_ptr->f_attr, func_para_2);
 
             if(strcmp(f_ptr->f_attr, func_para_2) != 0){
-                printf("different return type\n");
+                // printf("different return type\n");
                 //yyerror
                 memset(error_msg, 0, sizeof(error_msg));
                 strcat(error_msg, "function formal patameter is not the same");
@@ -611,7 +613,7 @@ int func_return_checking(Value _type, Value _id, int flag){
             }
 
             if(f_ptr->f_count == flag){
-                printf("redeclared\n");
+                // printf("redeclared\n");
                 //yyerror
                 memset(error_msg, 0, sizeof(error_msg));
                 strcat(error_msg, "Redeclared function ");
@@ -823,7 +825,7 @@ void dump_symbol() {
 
 //code generation function
 Value gencode_global_1(Value _type, Value _id, Value _expr, Value vval){
-    printf("in gencode_1\n");
+    // printf("in gencode_1\n");
     fprintf(file, ".field public static");
     /* Example:
       a. only const
@@ -860,12 +862,12 @@ Value gencode_global_1(Value _type, Value _id, Value _expr, Value vval){
     }
 
     fprintf(file, "%s", input_tmp);
-    printf("%s", input_tmp);
+    // printf("%s", input_tmp);
     return _val;
 }
 
 Value gencode_global_2(Value _type, Value _id, Value vval){
-    printf("in gencode_2\n");
+    // printf("in gencode_2\n");
     fprintf(file, ".field public static");
 
     Value _val;
@@ -895,13 +897,13 @@ Value gencode_global_2(Value _type, Value _id, Value vval){
     }
 
     fprintf(file, "%s", input_tmp);
-    printf("%s", input_tmp);    
+    // printf("%s", input_tmp);    
     // printf("%s, _id = %s, %d\n", input_tmp, _val.id_name, _val.id_symbol_type);
     return _val;
 }
 
 Value gencode_local_1(Value _type, Value _id, Value _expr, int index, Value vval){
-    printf("in gencode_local_1\n");
+    // printf("in gencode_local_1\n");
     /* Example:
        a. int a = 5;        ldc const
        b. int a = b;        find b ID
@@ -1008,12 +1010,12 @@ Value gencode_local_1(Value _type, Value _id, Value _expr, int index, Value vval
     }
     
     strcat(func_buf, input_tmp);
-    printf("%s", input_tmp);
+    // printf("%s", input_tmp);
     return _val;
 }
 
 Value gencode_local_2(Value _type, Value _id, int index, Value vval){
-    printf("in gencode_local_2\n");
+    // printf("in gencode_local_2\n");
 
     Value _val;
     _val.id_name = _id.id_name;
@@ -1046,12 +1048,12 @@ Value gencode_local_2(Value _type, Value _id, int index, Value vval){
     }
 
     strcat(func_buf, input_tmp);
-    printf("%s", input_tmp);
+    // printf("%s", input_tmp);
     return _val;
 }
 
 Value gencode_parameter(Value _type, Value _id, int index){
-    printf("in gencode_parameter\n");
+    // printf("in gencode_parameter\n");
 
     Value _val;
     _val.id_name = _id.id_name;
@@ -1063,7 +1065,7 @@ Value gencode_parameter(Value _type, Value _id, int index){
 }
 
 void gencode_func(Value _type, Value _id){
-    printf("in gencode_func\n");
+    // printf("in gencode_func\n");
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
 
@@ -1090,23 +1092,23 @@ void gencode_func(Value _type, Value _id){
                 break;
         }    
         fprintf(file, "%s", input_tmp);
-        printf("%s", input_tmp);
+        // printf("%s", input_tmp);
     }
 
     fprintf(file, ".limit stack 50\n.limit locals 50\n");
     fprintf(file, "%s", func_buf);
     fprintf(file, ".end method\n");
 
-    printf("%s", ".limit stack 50\n.limit locals 50\n");
-    printf("%s", func_buf);
-    printf(".end method\n");
+    // printf("%s", ".limit stack 50\n.limit locals 50\n");
+    // printf("%s", func_buf);
+    // printf(".end method\n");
 
     memset(func_buf, 0, sizeof(func_buf));       
     return;
 }
 
 void gencode_return(Value v){
-    printf("in gencode_return\n");
+    // printf("in gencode_return\n");
     /* Example: 
        a. return;
        b. return a;
@@ -1174,7 +1176,7 @@ void gencode_return(Value v){
 }
 
 void gencode_print(Value v){ 
-    printf("in gencode_print\n");
+    // printf("in gencode_print\n");
     /* Example: only print int, float, string variables and constants
        a. print(1);
        b. print("HELLO");
@@ -1222,7 +1224,7 @@ void gencode_print(Value v){
 
 //expression function
 Value switch_mul_op(Value v1, Operator op, Value v2){
-    printf("in switch_mul_op\n");
+    // printf("in switch_mul_op\n");
     
     switch (op){
         case MUL_OPT:
@@ -1238,7 +1240,7 @@ Value switch_mul_op(Value v1, Operator op, Value v2){
 }
 
 Value switch_addition_op(Value v1, Operator op, Value v2){
-    printf("in switch_addition_op\n");
+    // printf("in switch_addition_op\n");
     switch (op) {
         case ADD_OPT:
             return add_arith(v1, v2);
@@ -1251,7 +1253,7 @@ Value switch_addition_op(Value v1, Operator op, Value v2){
 }
 
 Value switch_postfix_op(Value v1, Operator op){
-    printf("in switch_postfix_op\n");
+    // printf("in switch_postfix_op\n");
     Value tmp;
     tmp.symbol_type = I_Type;
     tmp.i = 1;
@@ -1276,7 +1278,7 @@ Value switch_postfix_op(Value v1, Operator op){
 }
 
 Value switch_assign_op(Value v1, Operator op, Value v2){
-    printf("in switch_assign_op\n");
+    // printf("in switch_assign_op\n");
     // LHS_val = RHS_val
     Value RHS_val;
     Value LHS_val;
@@ -1333,7 +1335,7 @@ Value switch_assign_op(Value v1, Operator op, Value v2){
 }
 
 Value switch_relation_op(Value A, Operator op, Value B){
-    printf("in switch_relation_op\n");
+    // printf("in switch_relation_op\n");
     /* Example:
        a. x == y
        b. x != 3
@@ -1359,8 +1361,6 @@ Value switch_relation_op(Value A, Operator op, Value B){
     char input_tmp[100];
     memset(input_tmp, 0, sizeof(input_tmp));
 
-    //????????????
-    memset(while_buf, 0, sizeof(while_buf));
 
     sprintf(input_tmp, "label_%d:\n", ++label_index);
     strcat(func_buf, input_tmp);
@@ -1427,7 +1427,7 @@ Value switch_relation_op(Value A, Operator op, Value B){
 
 //arithmetic function
 Value mul_arith(Value A, Value B){
-    printf("in mul_arith\n");
+    // printf("in mul_arith\n");
     
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
@@ -1463,7 +1463,7 @@ Value mul_arith(Value A, Value B){
 }
 
 Value div_arith(Value A, Value B){
-    printf("in div_arith\n");
+    // printf("in div_arith\n");
     
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
@@ -1475,7 +1475,7 @@ Value div_arith(Value A, Value B){
     //cannot divide by zero
     if((v2.symbol_type == I_Type && v2.i == 0)
         || (v2.symbol_type == F_Type && v2.f == 0.0)){
-        printf("cannot divide by zero!!\n ");
+        // printf("cannot divide by zero!!\n ");
         //yyerror
         memset(error_msg, 0, sizeof(error_msg));
         strcat(error_msg, "Arithmetic errors - cannot divided by zero");
@@ -1510,7 +1510,7 @@ Value div_arith(Value A, Value B){
 }
 
 Value mod_arith(Value A, Value B){
-    printf("in mod_arith\n");
+    // printf("in mod_arith\n");
 
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
@@ -1525,7 +1525,7 @@ Value mod_arith(Value A, Value B){
         v_tmp.i = (v1.i)%(v2.i);
         strcat(func_buf, "\tirem\n");
     }else{
-        printf("wrong -- only int can mod\n");
+        // printf("wrong -- only int can mod\n");
         //yyerror
         memset(error_msg, 0, sizeof(error_msg));
         strcat(error_msg, "Arithmetic errors - Modulo operator only for interger");
@@ -1538,7 +1538,7 @@ Value mod_arith(Value A, Value B){
 }
 
 Value add_arith(Value A, Value B){
-    printf("in add_arith\n");
+    // printf("in add_arith\n");
     // printf("%d, %d, %s,,,%d\n", A.symbol_type, A.id_symbol_type, A.id_name, B.symbol_type);
     
     Value v1 = get_id_value(A, 1);
@@ -1577,7 +1577,7 @@ Value add_arith(Value A, Value B){
 }
 
 Value minus_arith(Value A, Value B){
-    printf("in minus_arith\n");
+    // printf("in minus_arith\n");
     
     Value v1 = get_id_value(A, 1);
     Value v2 = get_id_value(B, 1);
@@ -1648,7 +1648,7 @@ Value get_id_value(Value v, int flag){
         }
         ptr = ptr->pre;
     }
-    printf("Not Find ID -- get_id_value !!!!\n");
+    // printf("Not Find ID -- get_id_value !!!!\n");
     return _val;
 }
 
@@ -1673,7 +1673,7 @@ Value get_id_entry(Value v){
         }
         ptr = ptr->pre;
     }
-    printf("Not Find ID -- get_id_entry !!!!\n");
+    // printf("Not Find ID -- get_id_entry !!!!\n");
     return v;
 }
 
@@ -1778,7 +1778,7 @@ void gencode_istore (Value v){
             }
         }
     }else{  // the const
-        printf("store in const ??? -- gencode_istore\n");
+        // printf("store in const ??? -- gencode_istore\n");
     }
 
     strcat(func_buf, input_tmp);
@@ -1845,7 +1845,7 @@ void gencode_if_arith(Value A, Value B, int flag){
             case 1:
                 break;
             case 2:
-                printf("in speeeeeical case\n");
+                // printf("in speeeeeical case\n");
                 strcat(func_buf, "\tswap\n\ti2f\n");
                 break;
             case 3:
@@ -1856,13 +1856,13 @@ void gencode_if_arith(Value A, Value B, int flag){
                 break;
         }   
     }else{
-        printf("error in -- gencode_if_arith\n");
+        // printf("error in -- gencode_if_arith\n");
     }
     return;
 }
 
 Value gencode_funcall(Value _val){     
-    printf("in gencode_funcall\n");
+    // printf("in gencode_funcall\n");
     /* Example: a = foo(6);
        ldc 6
        invokestatic compiler_hw3/foo(I)I
@@ -1911,7 +1911,7 @@ Value gencode_funcall(Value _val){
                     tmp[tmp_index++] = B_Type;
                     strcat(para_tmp, "I");
                 }else{
-                    printf("wrong !!!\n");
+                    // printf("wrong !!!\n");
                 }
                 token = strtok (NULL, delim);
             } 
@@ -1927,7 +1927,7 @@ Value gencode_funcall(Value _val){
                 sprintf(input_tmp, "\tinvokestatic compiler_hw3/%s(%s)V\n", e_ptr->name, para_tmp);
                 v.symbol_type = V_Type;
             }else{
-                printf("wrong !!!\n");
+                // printf("wrong !!!\n");
             }
             break;
         }
@@ -1936,7 +1936,7 @@ Value gencode_funcall(Value _val){
 
     //is same # of parameter ?
     if(tmp_index != func_input_num){
-        printf("different index num %d, %d\n", tmp_index, func_input_num);
+        // printf("different index num %d, %d\n", tmp_index, func_input_num);
         //yyerror
         memset(error_msg, 0, sizeof(error_msg));
         strcat(error_msg, "function formal parameter is not the same");
@@ -1953,7 +1953,7 @@ Value gencode_funcall(Value _val){
         }
 
         if(_type != tmp[i]){
-            printf("error is different inptut type\n");
+            // printf("error is different inptut type\n");
             //yyerror
             memset(error_msg, 0, sizeof(error_msg));
             strcat(error_msg, "function formal parameter is not the same");
@@ -1971,12 +1971,12 @@ Value gencode_funcall(Value _val){
 }
 
 void gencode_while(Value v){
-    printf("in gencode_while\n");
+    // printf("in gencode_while\n");
 
     char input_tmp[200];
     memset(input_tmp, 0, sizeof(input_tmp));
 
-    printf("the index_num = %d\n", label_index);
+    // printf("the index_num = %d\n", label_index);
 
     sprintf(input_tmp, "label_%d:\n", label_index -1);
     strcat(func_buf, input_tmp);
